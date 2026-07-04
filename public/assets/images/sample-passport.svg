@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+  <title id="title">Sample employee passport photo</title>
+  <desc id="desc">Professional sample avatar for employee profile placeholder.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F68B34"/>
+      <stop offset="1" stop-color="#ED3237"/>
+    </linearGradient>
+    <linearGradient id="shirt" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f2937"/>
+      <stop offset="1" stop-color="#111827"/>
+    </linearGradient>
+  </defs>
+  <rect width="320" height="320" fill="#fff7f0"/>
+  <circle cx="160" cy="160" r="148" fill="url(#bg)" opacity="0.16"/>
+  <circle cx="160" cy="126" r="54" fill="#7c2d12"/>
+  <circle cx="160" cy="137" r="48" fill="#9a3412"/>
+  <path d="M72 300c8-66 42-100 88-100s80 34 88 100H72z" fill="url(#shirt)"/>
+  <path d="M128 208l32 48 32-48c-10 9-20 13-32 13s-22-4-32-13z" fill="#fff"/>
+  <path d="M160 221l-18 59h36l-18-59z" fill="#ED3237"/>
+  <path d="M95 300c4-42 27-66 65-66s61 24 65 66H95z" fill="#263244" opacity="0.9"/>
+  <circle cx="136" cy="132" r="6" fill="#111827"/>
+  <circle cx="184" cy="132" r="6" fill="#111827"/>
+  <path d="M143 164c11 9 23 9 34 0" fill="none" stroke="#431407" stroke-width="5" stroke-linecap="round"/>
+  <path d="M105 117c14-44 46-67 83-51 20 9 30 23 35 47-18-25-41-34-70-25-19 6-34 16-48 29z" fill="#431407"/>
+</svg>

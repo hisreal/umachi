@@ -1,0 +1,192 @@
+﻿.fuel-sales-history-page .fuel-sales-history-breadcrumb {
+    margin: 0 0 0.85rem;
+}
+
+.fuel-sales-history-page .fuel-sales-history-hero-card {
+    align-items: center;
+}
+
+.sales-summary-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-height: 8rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sales-summary-card:hover,
+.sales-stat-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.1);
+}
+
+.sales-summary-icon,
+.sales-stat-icon {
+    display: inline-grid;
+    width: 3rem;
+    height: 3rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 1rem;
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--clock-primary), var(--clock-secondary));
+    box-shadow: 0 12px 26px rgba(237, 50, 55, 0.18);
+}
+
+.sales-summary-card--success .sales-summary-icon {
+    background: linear-gradient(135deg, #22c55e, #15803d);
+}
+
+.sales-summary-card--danger .sales-summary-icon {
+    background: linear-gradient(135deg, #ef4444, #b91c1c);
+}
+
+.sales-summary-card span:not(.sales-summary-icon),
+.sales-stat-item span:not(.sales-stat-icon),
+.sales-chart-placeholder span {
+    display: block;
+    color: var(--clock-muted);
+    font-size: 0.82rem;
+    font-weight: 800;
+}
+
+.sales-summary-card strong,
+.sales-stat-item strong,
+.sales-chart-placeholder strong {
+    display: block;
+    margin-top: 0.18rem;
+    color: var(--clock-ink);
+    font-size: 1.18rem;
+}
+
+.sales-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin-top: 1.25rem;
+}
+
+.sales-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 1rem;
+    border: 1px solid rgba(246, 139, 52, 0.15);
+    border-radius: 1rem;
+    background: #fffaf6;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sales-chart-placeholder {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px dashed rgba(237, 50, 55, 0.32);
+    border-radius: 1rem;
+    background: linear-gradient(135deg, rgba(255, 247, 240, 0.9), rgba(255, 255, 255, 0.95));
+}
+
+.sales-chart-placeholder i {
+    display: inline-grid;
+    width: 2.85rem;
+    height: 2.85rem;
+    place-items: center;
+    border-radius: 0.9rem;
+    color: var(--clock-secondary);
+    background: #fff7f0;
+}
+
+.sales-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    justify-content: flex-end;
+}
+
+.sales-filters .form-control,
+.sales-filters .form-select,
+.sales-filters .filter-control {
+    width: min(13.25rem, 100%);
+}
+
+.sales-records-card .table-responsive {
+    margin-top: 1.2rem;
+    border: 1px solid var(--clock-border);
+    border-radius: 1rem;
+}
+
+.fuel-sales-table th,
+.fuel-sales-table td {
+    white-space: nowrap;
+}
+
+.sales-status--submitted {
+    color: var(--clock-success);
+    background: #dcfce7;
+}
+
+.sales-status--pending {
+    color: var(--clock-warning);
+    background: #ffedd5;
+}
+
+.sales-status--verified {
+    color: #1d4ed8;
+    background: #dbeafe;
+}
+
+.sales-status--rejected {
+    color: var(--clock-danger);
+    background: #fee2e2;
+}
+
+.sales-empty-row td {
+    padding: 1.5rem;
+    color: var(--clock-muted);
+    font-weight: 800;
+    text-align: center;
+}
+
+@media (max-width: 991.98px) {
+    .fuel-sales-history-page .fuel-sales-history-hero-card,
+    .sales-records-toolbar {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .sales-filters,
+    .sales-filters .form-control,
+    .sales-filters .form-select,
+    .sales-filters .filter-control {
+        width: 100%;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .sales-stat-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .sales-summary-card {
+        min-height: auto;
+    }
+
+    .sales-chart-placeholder {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .sales-pagination,
+    .sales-pagination .btn-group {
+        width: 100%;
+    }
+
+    .sales-pagination {
+        align-items: stretch;
+        flex-direction: column;
+    }
+}

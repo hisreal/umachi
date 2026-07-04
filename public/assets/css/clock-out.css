@@ -1,0 +1,88 @@
+.clock-out-page .fuel-sales-card .form-label {
+    color: var(--clock-muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.clock-out-page .clock-out-form {
+    margin-top: 1rem;
+}
+
+.clock-out-page .form-control,
+.clock-out-page .form-select {
+    min-height: 3rem;
+    border: 1px solid var(--clock-border);
+    border-radius: 0.95rem;
+    color: var(--clock-ink);
+    font-weight: 700;
+    background-color: #ffffff;
+}
+
+.clock-out-page textarea.form-control {
+    min-height: 7rem;
+    resize: vertical;
+}
+
+.clock-out-page .form-control:focus,
+.clock-out-page .form-select:focus {
+    border-color: rgba(246, 139, 52, 0.72);
+    box-shadow: 0 0 0 0.2rem rgba(246, 139, 52, 0.14);
+}
+
+.clock-out-page .form-control.is-invalid,
+.clock-out-page .form-select.is-invalid {
+    border-color: var(--clock-secondary);
+}
+
+.clock-out-page .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.9rem;
+    margin: 1.2rem 0 0;
+}
+
+.clock-out-page .summary-grid div {
+    padding: 0.9rem;
+    border: 1px solid rgba(246, 139, 52, 0.15);
+    border-radius: 1rem;
+    background: #fffaf6;
+}
+
+.clock-out-page .summary-grid__wide {
+    grid-column: 1 / -1;
+}
+
+.clock-out-page .summary-grid dt {
+    color: var(--clock-muted);
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.clock-out-page .summary-grid dd {
+    margin: 0.2rem 0 0;
+    color: var(--clock-ink);
+    font-weight: 800;
+}
+
+.clock-out-page .clock-out-action-card {
+    min-height: 100%;
+}
+
+.clock-out-page .clock-out-action-card .btn-clock-in {
+    align-self: flex-start;
+}
+
+@media (max-width: 575.98px) {
+    .clock-out-page .summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .clock-out-page .form-control,
+    .clock-out-page .form-select {
+        min-height: 2.85rem;
+    }
+}

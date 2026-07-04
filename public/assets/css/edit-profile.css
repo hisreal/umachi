@@ -1,0 +1,106 @@
+﻿.profile-card-toolbar {
+    align-items: flex-start;
+}
+
+.profile-edit-btn,
+.edit-profile-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    min-height: 2.75rem;
+    border-radius: 0.9rem;
+    font-weight: 800;
+}
+
+.edit-profile-page .edit-profile-hero-card {
+    align-items: center;
+}
+
+.edit-profile-page .edit-profile-form-card .form-label {
+    color: var(--clock-muted);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+
+.edit-profile-form-grid {
+    margin-top: 1.2rem;
+}
+
+.edit-profile-page .form-control,
+.edit-profile-page .form-select,
+.edit-profile-page .input-group-text {
+    min-height: 3rem;
+    border-color: var(--clock-border);
+    border-radius: 0.95rem;
+    color: var(--clock-ink);
+    font-weight: 700;
+}
+
+.edit-profile-page .input-group .form-control {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+.edit-profile-page .input-group-text {
+    color: var(--clock-secondary);
+    background: #fff7f0;
+    font-weight: 900;
+}
+
+.edit-profile-page textarea.form-control {
+    min-height: 7rem;
+    resize: vertical;
+}
+
+.edit-profile-page .form-control:focus,
+.edit-profile-page .form-select:focus {
+    border-color: rgba(246, 139, 52, 0.72);
+    box-shadow: 0 0 0 0.2rem rgba(246, 139, 52, 0.14);
+}
+
+.edit-profile-page .form-control[readonly] {
+    color: var(--clock-muted);
+    background: #f8fafc;
+}
+
+.edit-profile-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--clock-border);
+}
+
+.edit-profile-actions .btn {
+    min-width: 10rem;
+}
+
+.edit-profile-photo-card {
+    position: sticky;
+    top: 6rem;
+}
+
+@media (max-width: 1199.98px) {
+    .edit-profile-photo-card {
+        position: static;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .profile-card-toolbar,
+    .edit-profile-page .edit-profile-hero-card {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .profile-edit-btn,
+    .edit-profile-actions,
+    .edit-profile-actions .btn {
+        width: 100%;
+    }
+}

@@ -1,0 +1,116 @@
+﻿.dashboard-page .dashboard-section {
+    margin-bottom: 1.5rem;
+}
+
+.dashboard-action-card {
+    display: grid;
+    min-height: 13.5rem;
+    color: var(--clock-ink);
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.dashboard-action-card:hover {
+    color: var(--clock-ink);
+    border-color: rgba(246, 139, 52, 0.32);
+    box-shadow: 0 22px 54px rgba(15, 23, 42, 0.12);
+    transform: translateY(-4px);
+}
+
+.dashboard-action-icon,
+.dashboard-announcement-icon {
+    display: inline-grid;
+    width: 3.5rem;
+    height: 3.5rem;
+    place-items: center;
+    border-radius: 1rem;
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--clock-primary), var(--clock-secondary));
+    box-shadow: 0 14px 28px rgba(237, 50, 55, 0.18);
+}
+
+.dashboard-action-icon i {
+    font-size: 1.35rem;
+}
+
+.dashboard-action-card h2,
+.dashboard-section-header h2,
+.dashboard-announcement-card h3 {
+    margin: 0;
+    color: var(--clock-ink);
+    font-weight: 800;
+}
+
+.dashboard-action-card p,
+.dashboard-announcement-card p {
+    margin: 0.45rem 0 0;
+    color: var(--clock-muted);
+    font-weight: 700;
+}
+
+.dashboard-action-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    align-self: end;
+    color: var(--clock-secondary);
+    font-size: 0.86rem;
+    font-weight: 900;
+}
+
+.dashboard-action-card:hover .dashboard-action-link i {
+    transform: translateX(3px);
+}
+
+.dashboard-action-link i {
+    transition: transform 0.2s ease;
+}
+
+.dashboard-section-header {
+    margin-bottom: 1rem;
+}
+
+.dashboard-announcement-card {
+    display: flex;
+    gap: 1rem;
+    min-height: 100%;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.dashboard-announcement-card:hover {
+    box-shadow: 0 20px 48px rgba(15, 23, 42, 0.1);
+    transform: translateY(-2px);
+}
+
+.dashboard-announcement-icon {
+    width: 3rem;
+    height: 3rem;
+    flex: 0 0 auto;
+    border-radius: 0.95rem;
+}
+
+.dashboard-announcement-card time {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    margin-top: 0.85rem;
+    color: var(--clock-secondary);
+    font-size: 0.82rem;
+    font-weight: 900;
+}
+
+@media (max-width: 991.98px) {
+    .dashboard-announcement-card {
+        align-items: flex-start;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .dashboard-action-card {
+        min-height: 12rem;
+    }
+
+    .dashboard-announcement-card {
+        flex-direction: column;
+    }
+}

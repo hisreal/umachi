@@ -1,0 +1,294 @@
+<?php
+
+declare(strict_types=1);
+
+$pageTitle = 'Clock Out | FuelOps Staff Dashboard';
+$pageHeading = 'Clock Out';
+$topbarSubtitle = 'Pump Attendant Dashboard';
+$currentRoute = $currentRoute ?? 'attendance/clock-out';
+$extraStyles = ['css/clock-in.css', 'css/clock-out.css'];
+$extraScripts = ['js/clock-out.js'];
+
+// DATABASE PLACEHOLDER
+// Replace this sample data with values retrieved from the database during backend integration.
+$employee = $employee ?? [
+    'name' => 'Chinedu Okafor',
+    'employee_id' => 'EMP-FS-0017',
+    'department' => 'Forecourt Operations',
+    'role' => 'Pump Attendant',
+    'shift' => 'Morning Shift (06:00 AM - 02:00 PM)',
+    'assigned_pump' => 'Pump 03 - PMS Lane',
+];
+
+// DATABASE PLACEHOLDER
+// Replace this sample status with the employee's current attendance state from the database.
+$attendanceStatus = $attendanceStatus ?? [
+    'shift_date' => 'Saturday, July 4, 2026',
+    'current_time' => '01:54 PM',
+];
+
+// DATABASE PLACEHOLDER
+// Replace these sample form options with active pump and fuel product records from the database.
+$clockOutOptions = $clockOutOptions ?? [
+    'pumps' => ['Pump 1', 'Pump 2', 'Pump 3', 'Pump 4'],
+    'fuel_types' => ['PMS', 'AGO', 'DPK', 'LPG'],
+];
+
+// DATABASE PLACEHOLDER
+// Replace this sample sales summary with meter and payment records retrieved from the database.
+$fuelSalesSummary = $fuelSalesSummary ?? [
+    'assigned_pump' => 'Pump 3',
+    'fuel_type' => 'PMS',
+    'opening_meter' => '18,450.00',
+    'closing_meter' => '18,725.50',
+    'liters_sold' => '275.50',
+    'amount_collected' => '₦234,175',
+    'shift' => 'Morning Shift (06:00 AM - 02:00 PM)',
+    'date' => 'Saturday, July 4, 2026',
+    'remarks' => 'Shift completed successfully.',
+];
+
+// DATABASE PLACEHOLDER
+// Replace this sample history with completed shift records retrieved from the database.
+$previousShiftHistory = $previousShiftHistory ?? [
+    [
+        'date' => '2026-07-03',
+        'shift' => 'Morning',
+        'pump' => 'Pump 3',
+        'fuel_type' => 'PMS',
+        'liters_sold' => '268.40',
+        'amount' => '₦228,140',
+        'clock_out_time' => '02:06 PM',
+        'status' => 'Submitted',
+    ],
+    [
+        'date' => '2026-07-02',
+        'shift' => 'Morning',
+        'pump' => 'Pump 3',
+        'fuel_type' => 'PMS',
+        'liters_sold' => '251.80',
+        'amount' => '₦214,030',
+        'clock_out_time' => '02:04 PM',
+        'status' => 'Submitted',
+    ],
+];
+
+$attendantName = $employee['name'] ?? 'Station Staff';
+$attendantRole = $employee['role'] ?? 'Pump Attendant';
+
+require __DIR__ . '/../includes/header.php';
+?>
+<main class="clock-in-page clock-out-page">
+    <section class="clock-hero">
+        <div class="container-fluid">
+            <div class="clock-hero__content">
+                <div>
+                    <h1><?php echo e($pageHeading); ?></h1>
+                    <p>Record final meter readings, submit shift sales, and close your station shift.</p>
+                </div>
+                <div class="clock-hero__time" aria-live="polite">
+                    <span id="currentDate"><?php echo e($attendanceStatus['shift_date'] ?? 'Loading date...'); ?></span>
+                    <strong id="liveClock"><?php echo e($attendanceStatus['current_time'] ?? '--:--:--'); ?></strong>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="container-fluid clock-workspace">
+        <div class="row g-4">
+            <div class="col-12 col-xl-5">
+                <article class="employee-card app-card card">
+                    <div class="app-card__header">
+                        <div>
+                            <span class="eyebrow">Employee Information</span>
+                            <h2><?php echo e($employee['name'] ?? 'Station Staff'); ?></h2>
+                        </div>
+                        <span class="employee-avatar" aria-hidden="true">
+                            <i class="fa-solid fa-user-check"></i>
+                        </span>
+                    </div>
+                    <div class="employee-grid">
+                        <div>
+                            <span>Employee ID</span>
+                            <strong><?php echo e($employee['employee_id'] ?? 'Pending'); ?></strong>
+                        </div>
+                        <div>
+                            <span>Department</span>
+                            <strong><?php echo e($employee['department'] ?? 'Operations'); ?></strong>
+                        </div>
+                        <div>
+                            <span>Role</span>
+                            <strong><?php echo e($employee['role'] ?? 'Pump Attendant'); ?></strong>
+                        </div>
+                        <div>
+                            <span>Assigned Pump</span>
+                            <strong><?php echo e($employee['assigned_pump'] ?? 'Unassigned'); ?></strong>
+                        </div>
+                        <div class="employee-grid__wide">
+                            <span>Assigned Shift</span>
+                            <strong><?php echo e($employee['shift'] ?? 'Pending'); ?></strong>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
+            <div class="col-12 col-xl-7">
+                <article class="app-card card fuel-sales-card">
+                    <div class="app-card__header">
+                        <div>
+                            <span class="eyebrow">Fuel Sales Module</span>
+                            <h2>Shift Sales Entry</h2>
+                        </div>
+                        <span class="status-pill status-waiting">Pending Review</span>
+                    </div>
+                    <form id="clockOutForm" class="clock-out-form" novalidate>
+                        <div class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label class="form-label" for="pumpSelection">Pump Selection</label>
+                                <select id="pumpSelection" class="form-select" required>
+                                    <?php foreach ($clockOutOptions['pumps'] as $pump): ?>
+                                        <option value="<?php echo e($pump); ?>" <?php echo $pump === $fuelSalesSummary['assigned_pump'] ? 'selected' : ''; ?>><?php echo e($pump); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label" for="fuelType">Fuel Type</label>
+                                <select id="fuelType" class="form-select" required>
+                                    <?php foreach ($clockOutOptions['fuel_types'] as $fuelType): ?>
+                                        <option value="<?php echo e($fuelType); ?>" <?php echo $fuelType === $fuelSalesSummary['fuel_type'] ? 'selected' : ''; ?>><?php echo e($fuelType); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label" for="openingMeter">Opening Meter Reading</label>
+                                <input type="number" step="0.01" min="0" id="openingMeter" class="form-control" value="18450.00" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label" for="closingMeter">Closing Meter Reading</label>
+                                <input type="number" step="0.01" min="0" id="closingMeter" class="form-control" value="18725.50" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label" for="litersSold">Liters Sold</label>
+                                <input type="number" step="0.01" min="0" id="litersSold" class="form-control" value="275.50" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label class="form-label" for="amountCollected">Amount Collected</label>
+                                <input type="text" inputmode="decimal" id="amountCollected" class="form-control" value="₦234,175" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="remarks">Remarks</label>
+                                <textarea id="remarks" class="form-control" rows="4" placeholder="Optional shift remarks"><?php echo e($fuelSalesSummary['remarks']); ?></textarea>
+                            </div>
+                        </div>
+                    </form>
+                </article>
+            </div>
+
+            <div class="col-12 col-xl-5">
+                <article class="app-card card shift-summary-card">
+                    <div class="app-card__header">
+                        <div>
+                            <span class="eyebrow">Shift Summary</span>
+                            <h2>Sales Snapshot</h2>
+                        </div>
+                        <span class="employee-avatar employee-avatar--small" aria-hidden="true">
+                            <i class="fa-solid fa-gas-pump"></i>
+                        </span>
+                    </div>
+                    <dl class="summary-grid">
+                        <div>
+                            <dt>Assigned Pump</dt>
+                            <dd id="summaryPump"><?php echo e($fuelSalesSummary['assigned_pump']); ?></dd>
+                        </div>
+                        <div>
+                            <dt>Fuel Type</dt>
+                            <dd id="summaryFuelType"><?php echo e($fuelSalesSummary['fuel_type']); ?></dd>
+                        </div>
+                        <div>
+                            <dt>Opening Meter</dt>
+                            <dd id="summaryOpeningMeter"><?php echo e($fuelSalesSummary['opening_meter']); ?></dd>
+                        </div>
+                        <div>
+                            <dt>Closing Meter</dt>
+                            <dd id="summaryClosingMeter"><?php echo e($fuelSalesSummary['closing_meter']); ?></dd>
+                        </div>
+                        <div>
+                            <dt>Liters Sold</dt>
+                            <dd id="summaryLitersSold"><?php echo e($fuelSalesSummary['liters_sold']); ?></dd>
+                        </div>
+                        <div>
+                            <dt>Amount Collected</dt>
+                            <dd id="summaryAmountCollected"><?php echo e($fuelSalesSummary['amount_collected']); ?></dd>
+                        </div>
+                        <div class="summary-grid__wide">
+                            <dt>Shift</dt>
+                            <dd><?php echo e($fuelSalesSummary['shift']); ?></dd>
+                        </div>
+                        <div class="summary-grid__wide">
+                            <dt>Date</dt>
+                            <dd><?php echo e($fuelSalesSummary['date']); ?></dd>
+                        </div>
+                    </dl>
+                </article>
+            </div>
+
+            <div class="col-12 col-xl-7">
+                <article class="app-card card clock-action-card clock-out-action-card">
+                    <div>
+                        <span class="eyebrow">Clock Out Section</span>
+                        <h2>Ready to Submit Shift?</h2>
+                        <p>Review meter readings and collected amount before closing your shift.</p>
+                    </div>
+                    <button type="submit" form="clockOutForm" class="btn btn-clock-in" id="clockOutBtn">
+                        <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                        Clock Out
+                    </button>
+                </article>
+            </div>
+
+            <div class="col-12">
+                <article class="app-card card history-card">
+                    <div class="history-toolbar">
+                        <div>
+                            <span class="eyebrow">Previous Shift History</span>
+                            <h2>Completed Sales Records</h2>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table attendance-table align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Shift</th>
+                                    <th>Pump</th>
+                                    <th>Fuel Type</th>
+                                    <th>Liters Sold</th>
+                                    <th>Amount</th>
+                                    <th>Clock Out Time</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($previousShiftHistory as $record): ?>
+                                    <tr>
+                                        <td><?php echo e($record['date']); ?></td>
+                                        <td><?php echo e($record['shift']); ?></td>
+                                        <td><?php echo e($record['pump']); ?></td>
+                                        <td><?php echo e($record['fuel_type']); ?></td>
+                                        <td><?php echo e($record['liters_sold']); ?></td>
+                                        <td><?php echo e($record['amount']); ?></td>
+                                        <td><?php echo e($record['clock_out_time']); ?></td>
+                                        <td>
+                                            <span class="table-badge table-badge--success"><?php echo e($record['status']); ?></span>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </section>
+</main>
+<?php require __DIR__ . '/../includes/footer.php'; ?>
