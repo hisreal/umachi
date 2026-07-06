@@ -66,7 +66,6 @@ require __DIR__ . '/../includes/header.php';
                 <div class="history-toolbar dashboard-section-header">
                     <div>
                         <span class="eyebrow">Latest Notices</span>
-                        <h2 id="dashboardAnnouncementsTitle">Announcements</h2>
                     </div>
                 </div>
                 <div class="row g-4">

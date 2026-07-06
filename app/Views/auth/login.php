@@ -98,7 +98,7 @@ $systemName = 'Staff & Activity Management System';
         </section>
 
         <footer class="auth-footer">
-            <span>&copy; 2026 ABC Filling Station.</span>
+            <span>&copy; 2026 Umachi Oil and Gas.</span>
             <span>All Rights Reserved.</span>
             <span>Version 1.0.0</span>
         </footer>

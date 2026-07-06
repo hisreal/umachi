@@ -41,9 +41,9 @@ switch ($route) {
         $controller->fuelSalesHistory();
         break;
 
-    case 'duty-roster':
-        $controller->dutyRoster();
-        break;
+    // case 'duty-roster':
+    //     $controller->dutyRoster();
+    //     break;
 
     case 'leave-requests':
         $controller->leaveRequests();
