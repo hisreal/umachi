@@ -13,7 +13,7 @@ $extraScripts = $extraScripts ?? [];
     <script src="<?php echo e(asset_url('vendor/bootstrap/js/bootstrap.bundle.min.js')); ?>"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <?php foreach ($extraScripts as $scriptPath): ?>
-        <script src="<?php echo e(asset_url($scriptPath)); ?>"></script>
+        <script src="<?php echo e(str_starts_with($scriptPath, 'http') ? $scriptPath : asset_url($scriptPath)); ?>"></script>
     <?php endforeach; ?>
 </body>
 </html>

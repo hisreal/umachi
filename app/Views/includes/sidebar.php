@@ -1,6 +1,4 @@
-<?php
-
-declare(strict_types=1);
+<?php declare(strict_types=1);
 
 $currentRoute = $currentRoute ?? 'attendance/clock-in';
 $attendantName = $attendantName ?? ($employee['name'] ?? 'Station Staff');
@@ -10,8 +8,8 @@ $navItems = $navItems ?? [
     ['label' => 'Clock In', 'route' => 'attendance/clock-in', 'icon' => 'fa-solid fa-fingerprint'],
     ['label' => 'Clock Out', 'route' => 'attendance/clock-out', 'icon' => 'fa-solid fa-arrow-right-from-bracket'],
      ['label' => 'Fuel Sales History', 'route' => 'fuel-sales/history', 'icon' => 'fa-solid fa-gas-pump'],
-    // ['label' => 'Attendance History', 'route' => 'attendance/history', 'icon' => 'fa-solid fa-clock-rotate-left'],
-    // ['label' => 'Duty Roster', 'route' => 'duty-roster', 'icon' => 'fa-solid fa-calendar-days'],
+    ['label' => 'Attendance History', 'route' => 'attendance/history', 'icon' => 'fa-solid fa-clock-rotate-left'],
+ ['label' => 'Duty Roster', 'route' => 'duty-roster', 'icon' => 'fa-solid fa-calendar-days'],
     // ['label' => 'Leave Requests', 'route' => 'leave-requests', 'icon' => 'fa-solid fa-person-walking-arrow-right'],
     // ['label' => 'Profile', 'route' => 'profile', 'icon' => 'fa-solid fa-user-gear'],
     ['label' => 'logout', 'route' => 'auth/login', 'icon' => 'fa-solid fa-right-from-bracket'],

@@ -1,0 +1,96 @@
+﻿.employee-breadcrumb {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 18px;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+.employee-breadcrumb a { color: #fff; text-decoration: none; }
+.employee-breadcrumb i { font-size: 0.72rem; }
+.employee-hero-card { align-items: center; }
+.employee-hero-action,
+.employee-profile-actions .btn,
+.employee-hero .btn { display: inline-flex; align-items: center; gap: 9px; border-radius: 12px; font-weight: 900; }
+.employee-hero-icon { width: 58px; height: 58px; display: inline-flex; align-items: center; justify-content: center; border-radius: 18px; color: #fff; background: linear-gradient(135deg, #f68b34, #ed3237); box-shadow: 0 18px 36px rgba(237, 50, 55, 0.24); }
+.employee-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
+.employee-summary-card { min-height: 122px; display: flex; align-items: center; gap: 16px; padding: 22px; border-radius: 18px; background: #fff; border: 1px solid rgba(15, 23, 42, 0.08); box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.employee-summary-card:hover { transform: translateY(-4px); box-shadow: 0 22px 46px rgba(15, 23, 42, 0.12); }
+.employee-summary-card > span,
+.employee-section-heading > span,
+.document-card-icon { width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 48px; border-radius: 16px; color: #fff; background: linear-gradient(135deg, #f68b34, #ed3237); }
+.employee-summary-card--success > span { background: linear-gradient(135deg, #16a34a, #15803d); }
+.employee-summary-card--danger > span { background: linear-gradient(135deg, #ed3237, #b91c1c); }
+.employee-summary-card--warning > span { background: linear-gradient(135deg, #f59e0b, #d97706); }
+.employee-summary-card small { display: block; color: #667085; font-weight: 800; text-transform: uppercase; }
+.employee-summary-card strong { display: block; margin-top: 5px; color: #101828; font-size: 1.45rem; line-height: 1.1; }
+.employee-list-card,
+.employee-form-section,
+.employee-profile-card,
+.employee-info-card,
+.employee-mini-table { border: 0; }
+.employee-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin-bottom: 18px; }
+.employee-toolbar h2,
+.employee-form-section h2,
+.employee-info-card h2,
+.employee-mini-table h2 { margin: 0; color: #101828; font-size: 1.15rem; font-weight: 900; }
+.employee-toolbar-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.employee-filter-grid { display: grid; grid-template-columns: minmax(240px, 1.5fr) repeat(4, minmax(140px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.employee-filter-grid--documents { grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr); max-width: 520px; }
+.filter-control { position: relative; }
+.filter-control i { position: absolute; left: 14px; top: 50%; color: #98a2b3; transform: translateY(-50%); }
+.filter-control input { width: 100%; padding-left: 40px; }
+.employee-filter-grid .form-select,
+.employee-filter-grid .form-control,
+.filter-control input,
+.employee-form .form-control,
+.employee-form .form-select { min-height: 46px; border-radius: 12px; border: 1px solid #d0d5dd; color: #101828; font-weight: 700; box-shadow: none; }
+.employee-filter-grid .form-select:focus,
+.employee-filter-grid .form-control:focus,
+.filter-control input:focus,
+.employee-form .form-control:focus,
+.employee-form .form-select:focus { border-color: #f68b34; box-shadow: 0 0 0 0.22rem rgba(246, 139, 52, 0.14); }
+.employee-avatar-sm { width: 44px; height: 44px; object-fit: cover; border-radius: 999px; border: 3px solid #fff; box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12); }
+.employee-actions { display: inline-flex; gap: 7px; }
+.employee-actions .btn { width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; }
+.employee-status--active { color: #166534; background: rgba(22, 163, 74, 0.13); }
+.employee-status--inactive { color: #991b1b; background: rgba(237, 50, 55, 0.13); }
+.employee-status--leave { color: #9a3412; background: rgba(246, 139, 52, 0.15); }
+.employee-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; color: #667085; font-weight: 800; }
+.employee-pagination > div { display: inline-flex; gap: 8px; }
+.employee-form { display: grid; gap: 22px; }
+.employee-form-section { padding: 24px; }
+.employee-section-heading { display: flex; align-items: center; gap: 14px; margin-bottom: 20px; }
+.employee-section-heading small { display: block; color: #f68b34; font-weight: 900; text-transform: uppercase; }
+.employee-photo-upload { display: grid; gap: 12px; padding: 16px; border: 1px dashed rgba(246, 139, 52, 0.45); border-radius: 18px; background: #fff7f0; }
+.employee-photo-upload img { width: 132px; height: 132px; object-fit: cover; border-radius: 50%; margin: 0 auto; border: 4px solid #fff; box-shadow: 0 12px 26px rgba(15, 23, 42, 0.12); }
+.employee-password-field { display: flex; gap: 8px; }
+.employee-password-field .btn { min-width: 46px; border-radius: 12px; }
+.password-strength { height: 7px; margin-top: 9px; overflow: hidden; border-radius: 999px; background: #e5e7eb; }
+.password-strength span { display: block; width: 0; height: 100%; border-radius: inherit; background: #ed3237; transition: width 0.2s ease, background-color 0.2s ease; }
+.password-strength.is-medium span { width: 62%; background: #f59e0b; }
+.password-strength.is-strong span { width: 100%; background: #16a34a; }
+.password-strength.is-weak span { width: 32%; background: #ed3237; }
+.employee-form-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.employee-form-actions .btn { min-height: 46px; display: inline-flex; align-items: center; gap: 9px; border-radius: 12px; font-weight: 900; }
+.employee-profile-card { padding: 26px; text-align: center; }
+.employee-profile-card > img { width: 132px; height: 132px; object-fit: cover; border-radius: 50%; margin: 0 auto 16px; border: 5px solid #fff; box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14); }
+.employee-profile-card h2 { margin: 0 0 6px; font-weight: 900; color: #101828; }
+.employee-profile-card p { color: #667085; font-weight: 800; }
+.employee-profile-meta { display: grid; gap: 10px; margin: 20px 0; text-align: left; }
+.employee-profile-meta div,
+.employee-info-list div { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 12px 0; border-bottom: 1px solid rgba(15, 23, 42, 0.08); }
+.employee-profile-meta span,
+.employee-info-list span { color: #667085; font-weight: 800; }
+.employee-profile-meta strong,
+.employee-info-list strong { color: #101828; text-align: right; }
+.employee-info-card { padding: 22px; height: 100%; }
+.employee-mini-table { padding: 22px; height: 100%; }
+.document-card { height: 100%; display: grid; gap: 14px; padding: 22px; border-radius: 18px; background: #fff; border: 1px solid rgba(15, 23, 42, 0.08); box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08); }
+.document-card h3 { margin: 0 0 6px; color: #101828; font-size: 1rem; font-weight: 900; }
+.document-card p { margin: 0 0 9px; color: #667085; font-weight: 700; }
+.document-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.document-actions .btn { border-radius: 10px; font-weight: 800; }
+@media (max-width: 1199.98px) { .employee-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .employee-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .filter-control--wide { grid-column: 1 / -1; } }
+@media (max-width: 767.98px) { .employee-summary-grid, .employee-filter-grid, .employee-filter-grid--documents { grid-template-columns: 1fr; } .employee-toolbar, .employee-pagination { align-items: stretch; flex-direction: column; } .employee-toolbar-actions, .employee-profile-actions, .employee-form-actions { flex-direction: column; } .employee-toolbar-actions .btn, .employee-profile-actions .btn, .employee-form-actions .btn { width: 100%; justify-content: center; } .employee-profile-meta div, .employee-info-list div { display: grid; } .employee-profile-meta strong, .employee-info-list strong { text-align: left; } }
