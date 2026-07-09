@@ -26,9 +26,7 @@ require __DIR__ . '/../includes/header.php';
         <form class="app-card card attendance-settings-form needs-validation" id="attendanceSettingsForm" novalidate>
             <div class="app-card__header"><div><span class="eyebrow">Rules</span><h2>Attendance Configuration</h2></div></div>
             <div class="row g-3">
-                <div class="col-md-4"><label class="form-label" for="clockInTime">Clock-In Time</label><input class="form-control" type="time" id="clockInTime" value="<?php echo e($attendanceSettings['clock_in']); ?>" required></div>
-                <div class="col-md-4"><label class="form-label" for="clockOutTime">Clock-Out Time</label><input class="form-control" type="time" id="clockOutTime" value="<?php echo e($attendanceSettings['clock_out']); ?>" required></div>
-                <div class="col-md-4"><label class="form-label" for="overtimeStart">Overtime Start</label><input class="form-control" type="time" id="overtimeStart" value="<?php echo e($attendanceSettings['overtime_start']); ?>" required></div>
+               
                 <div class="col-md-4"><label class="form-label" for="gracePeriod">Grace Period (Minutes)</label><input class="form-control" type="number" id="gracePeriod" value="<?php echo e((string) $attendanceSettings['grace_period']); ?>" min="0" required><small>Employees arriving within this period are still considered present.</small></div>
                 <div class="col-md-4"><label class="form-label" for="lateThreshold">Late Threshold (Minutes)</label><input class="form-control" type="number" id="lateThreshold" value="<?php echo e((string) $attendanceSettings['late_threshold']); ?>" min="1" required><small>Employees arriving after this time are marked late.</small></div>
                 <div class="col-md-4"><label class="form-label" for="maxOvertime">Maximum Overtime (Hours)</label><input class="form-control" type="number" id="maxOvertime" value="<?php echo e((string) $attendanceSettings['max_overtime']); ?>" min="0" required></div>

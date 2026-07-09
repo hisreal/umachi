@@ -1,0 +1,16 @@
+{
+    "name": "fuelops/staff-activity-management",
+    "description": "Filling Station Staff and Activity Management System",
+    "type": "project",
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        },
+        "files": [
+            "app/Helpers/functions.php"
+        ]
+    },
+    "require": {
+        "php": ">=8.0"
+    }
+}

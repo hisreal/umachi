@@ -4,29 +4,32 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Core\Controller;
 use App\Models\Attendance;
 
-class AttendanceController
+class AttendanceController extends Controller
 {
     private Attendance $attendance;
-    private string $assetBaseUrl;
 
     public function __construct()
     {
-        if (!class_exists(Attendance::class)) {
-            require_once __DIR__ . '/../Models/Attendance.php';
-        }
+        parent::__construct();
 
         $this->attendance = new Attendance();
-        $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
-        $basePath = rtrim($scriptDir === '/' ? '' : $scriptDir, '/');
-        $this->assetBaseUrl = $basePath . '/public/assets';
     }
 
     /**
      * Load the staff dashboard overview.
      */
     public function index(): void
+    {
+        $this->dashboard();
+    }
+
+    /**
+     * Preserve the existing frontend fallback page.
+     */
+    public function notFound(): void
     {
         $this->dashboard();
     }
@@ -105,7 +108,6 @@ class AttendanceController
     public function clockIn(): void
     {
         $this->render('attendant/clock-in.php', [
-            'assetBaseUrl' => $this->assetBaseUrl,
             'currentRoute' => 'attendance/clock-in',
             'employee' => $this->attendance->getEmployee(),
             'attendanceStatus' => $this->attendance->getAttendanceStatus(),
@@ -119,7 +121,6 @@ class AttendanceController
     public function clockOut(): void
     {
         $this->render('attendant/clock-out.php', [
-            'assetBaseUrl' => $this->assetBaseUrl,
             'currentRoute' => 'attendance/clock-out',
             'employee' => $this->attendance->getEmployee(),
             'attendanceStatus' => $this->attendance->getAttendanceStatus(),
@@ -135,47 +136,46 @@ class AttendanceController
     public function attendanceHistoryPage(): void
     {
         $this->render('attendant/attendance-history.php', [
-            'assetBaseUrl' => $this->assetBaseUrl,
             'currentRoute' => 'attendance/history',
         ]);
     }
+
     /**
      * Load the duty roster page with static sample data.
      */
     public function dutyRoster(): void
     {
         $this->render('attendant/duty-roster.php', [
-            'assetBaseUrl' => $this->assetBaseUrl,
             'currentRoute' => 'duty-roster',
         ]);
     }
+
     /**
      * Load fuel sales history with static sample records.
      */
     public function fuelSalesHistory(): void
     {
         $this->render('attendant/fuel-sales-history.php', [
-            'assetBaseUrl' => $this->assetBaseUrl,
             'currentRoute' => 'fuel-sales/history',
         ]);
     }
+
     /**
      * Load leave management with static sample records.
      */
     public function leaveRequests(): void
     {
         $this->render('attendant/leave.php', [
-            'assetBaseUrl' => $this->assetBaseUrl,
             'currentRoute' => 'leave-requests',
         ]);
     }
+
     /**
      * Load the staff profile page with static employee data.
      */
     public function profile(): void
     {
         $this->render('attendant/profile.php', [
-            'assetBaseUrl' => $this->assetBaseUrl,
             'currentRoute' => 'profile',
         ]);
     }
@@ -186,10 +186,10 @@ class AttendanceController
     public function editProfile(): void
     {
         $this->render('attendant/edit_profile.php', [
-            'assetBaseUrl' => $this->assetBaseUrl,
             'currentRoute' => 'profile',
         ]);
     }
+
     /**
      * Load settings with static preferences.
      */
@@ -229,19 +229,8 @@ class AttendanceController
     private function renderStaticPage(string $route, array $data): void
     {
         $this->render('attendant/dashboard-page.php', array_merge([
-            'assetBaseUrl' => $this->assetBaseUrl,
             'currentRoute' => $route,
             'employee' => $this->attendance->getEmployee(),
         ], $data));
-    }
-
-    /**
-     * Render a view with scoped variables.
-     */
-    private function render(string $view, array $data = []): void
-    {
-        extract($data, EXTR_SKIP);
-
-        require __DIR__ . '/../Views/' . ltrim($view, '/');
     }
 }

@@ -34,44 +34,6 @@ $clockOutOptions = $clockOutOptions ?? [
     'fuel_types' => ['PMS', 'AGO', 'DPK', 'LPG'],
 ];
 
-// DATABASE PLACEHOLDER
-// Replace this sample sales summary with meter and payment records retrieved from the database.
-$fuelSalesSummary = $fuelSalesSummary ?? [
-    'assigned_pump' => 'Pump 3',
-    'fuel_type' => 'PMS',
-    'opening_meter' => '18,450.00',
-    'closing_meter' => '18,725.50',
-    'liters_sold' => '275.50',
-    'amount_collected' => '₦234,175',
-    'shift' => 'Morning Shift (06:00 AM - 02:00 PM)',
-    'date' => 'Saturday, July 4, 2026',
-    'remarks' => 'Shift completed successfully.',
-];
-
-// DATABASE PLACEHOLDER
-// Replace this sample history with completed shift records retrieved from the database.
-$previousShiftHistory = $previousShiftHistory ?? [
-    [
-        'date' => '2026-07-03',
-        'shift' => 'Morning',
-        'pump' => 'Pump 3',
-        'fuel_type' => 'PMS',
-        'liters_sold' => '268.40',
-        'amount' => '₦228,140',
-        'clock_out_time' => '02:06 PM',
-        'status' => 'Submitted',
-    ],
-    [
-        'date' => '2026-07-02',
-        'shift' => 'Morning',
-        'pump' => 'Pump 3',
-        'fuel_type' => 'PMS',
-        'liters_sold' => '251.80',
-        'amount' => '₦214,030',
-        'clock_out_time' => '02:04 PM',
-        'status' => 'Submitted',
-    ],
-];
 
 $attendantName = $employee['name'] ?? 'Station Staff';
 $attendantRole = $employee['role'] ?? 'Pump Attendant';
@@ -246,48 +208,7 @@ require __DIR__ . '/../includes/header.php';
                 </article>
             </div>
 
-            <div class="col-12">
-                <article class="app-card card history-card">
-                    <div class="history-toolbar">
-                        <div>
-                            <span class="eyebrow">Previous Shift History</span>
-                            <h2>Completed Sales Records</h2>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="table attendance-table align-middle">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Shift</th>
-                                    <th>Pump</th>
-                                    <th>Fuel Type</th>
-                                    <th>Liters Sold</th>
-                                    <th>Amount</th>
-                                    <th>Clock Out Time</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($previousShiftHistory as $record): ?>
-                                    <tr>
-                                        <td><?php echo e($record['date']); ?></td>
-                                        <td><?php echo e($record['shift']); ?></td>
-                                        <td><?php echo e($record['pump']); ?></td>
-                                        <td><?php echo e($record['fuel_type']); ?></td>
-                                        <td><?php echo e($record['liters_sold']); ?></td>
-                                        <td><?php echo e($record['amount']); ?></td>
-                                        <td><?php echo e($record['clock_out_time']); ?></td>
-                                        <td>
-                                            <span class="table-badge table-badge--success"><?php echo e($record['status']); ?></span>
-                                        </td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </article>
-            </div>
+          
         </div>
     </section>
 </main>

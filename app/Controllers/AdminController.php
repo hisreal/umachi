@@ -4,35 +4,27 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
-class AdminController
+use App\Core\Controller;
+
+class AdminController extends Controller
 {
-    private string $assetBaseUrl;
-
-    public function __construct()
-    {
-        $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
-        $basePath = rtrim($scriptDir === '/' ? '' : $scriptDir, '/');
-        $this->assetBaseUrl = $basePath . '/public/assets';
-    }
-
     /**
      * Load the administrator dashboard landing page.
      */
     public function dashboard(): void
     {
         $this->render('admin/dashboard.php', [
-            'assetBaseUrl' => $this->assetBaseUrl,
             'currentRoute' => 'admin/dashboard',
             'navItems' => $this->adminNavItems(),
         ]);
     }
 
     /**
-     * Load a frontend-only placeholder page for future admin modules.
+     * Load an admin page or a frontend-only placeholder for future modules.
      */
     public function placeholderPage(string $route): void
     {
-        $employeeViews = [
+        $adminViews = [
             'admin/employees' => 'admin/employee-list.php',
             'admin/add-employee' => 'admin/add-employee.php',
             'admin/edit-employee' => 'admin/edit-employee.php',
@@ -47,22 +39,52 @@ class AdminController
             'admin/fuel-sales-history' => 'admin/fuel-sales-history.php',
             'admin/fuel-sales-report' => 'admin/fuel-sales-report.php',
             'admin/fuel-sales-reports' => 'admin/fuel-sales-report.php',
+            'admin/fuel-inventory' => 'admin/fuel-inventory.php',
             'admin/pump-meter-history' => 'admin/pump-meter-history.php',
+            'admin/pumps' => 'admin/pumps.php',
+            'admin/add-pump' => 'admin/add-pump.php',
+            'admin/edit-pump' => 'admin/edit-pump.php',
+            'admin/duty-roster' => 'admin/duty-roster.php',
+            'admin/manage-duty-roster' => 'admin/duty-roster.php',
+            'admin/calendar' => 'admin/calendar.php',
+            'admin/duty-calendar' => 'admin/calendar.php',
+            'admin/shift-management' => 'admin/shift-management.php',
+            'admin/pump-allocation' => 'admin/pump-allocation.php',
+            'admin/leave-dashboard' => 'admin/leave-dashboard.php',
+            'admin/leave-requests' => 'admin/leave-requests.php',
+            'admin/leave-history' => 'admin/leave-history.php',
+            'admin/leave-types' => 'admin/leave-types.php',
+            'admin/approval-settings' => 'admin/leave-approval-settings.php',
+            'admin/leave-approval-settings' => 'admin/leave-approval-settings.php',
+            'admin/fuel-pricing' => 'admin/fuel-pricing.php',
+            'admin/announcements' => 'admin/announcements.php',
+            'admin/add-announcement' => 'admin/add-announcement.php',
+            'admin/edit-announcement' => 'admin/edit-announcement.php',
+            'admin/announcement-details' => 'admin/announcement-details.php',
+            'admin/activity-log' => 'admin/activity-log.php',
+            'admin/profile' => 'admin/profile.php',
+            'admin/edit-profile' => 'admin/edit-profile.php',
+            'admin/change-password' => 'admin/change-password.php',
         ];
 
-        if (isset($employeeViews[$route])) {
-            $this->render($employeeViews[$route], [
-                'assetBaseUrl' => $this->assetBaseUrl,
+        $view = $adminViews[$route] ?? null;
+
+        if ($view !== null && is_file(VIEW_PATH . '/' . $view)) {
+            $this->render($view, [
                 'currentRoute' => $route,
                 'navItems' => $this->adminNavItems(),
             ]);
             return;
         }
 
+        $this->renderAdminPlaceholder($route);
+    }
+
+    private function renderAdminPlaceholder(string $route): void
+    {
         $pageHeading = $this->titleFromRoute($route);
 
         $this->render('attendant/dashboard-page.php', [
-            'assetBaseUrl' => $this->assetBaseUrl,
             'currentRoute' => $route,
             'pageTitle' => $pageHeading . ' | FuelOps Admin Dashboard',
             'pageHeading' => $pageHeading,
@@ -85,17 +107,11 @@ class AdminController
         ]);
     }
 
-    /**
-     * Load the reusable admin navigation definition.
-     */
     private function adminNavItems(): array
     {
-        return require __DIR__ . '/../Views/includes/admin-nav.php';
+        return require VIEW_PATH . '/includes/admin-nav.php';
     }
 
-    /**
-     * Convert a route slug into a human-readable placeholder title.
-     */
     private function titleFromRoute(string $route): string
     {
         $slug = preg_replace('/^admin\//', '', trim($route, '/'));
@@ -104,9 +120,6 @@ class AdminController
         return ucwords($title);
     }
 
-    /**
-     * Pick a sensible icon for placeholder admin modules.
-     */
     private function iconForRoute(string $route): string
     {
         if (str_contains($route, 'employee')) {
@@ -134,15 +147,5 @@ class AdminController
         }
 
         return 'fa-solid fa-gauge-high';
-    }
-
-    /**
-     * Render a view with scoped variables.
-     */
-    private function render(string $view, array $data = []): void
-    {
-        extract($data, EXTR_SKIP);
-
-        require __DIR__ . '/../Views/' . ltrim($view, '/');
     }
 }

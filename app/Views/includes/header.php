@@ -22,7 +22,7 @@ $extraStyles = $extraStyles ?? [];
     <link rel="stylesheet" href="<?php echo e(asset_url('vendor/fontawesome/css/all.min.css')); ?>">
 
     <?php foreach ($extraStyles as $stylePath): ?>
-        <link rel="stylesheet" href="<?php echo e(asset_url($stylePath)); ?>">
+        <link rel="stylesheet" href="<?php echo e(str_starts_with($stylePath, 'http') ? $stylePath : asset_url($stylePath)); ?>">
     <?php endforeach; ?>
 </head>
 <body class="attendant-dashboard-layout">

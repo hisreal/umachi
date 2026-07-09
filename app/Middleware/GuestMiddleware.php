@@ -1,0 +1,17 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Middleware;
+
+use App\Core\Request;
+use App\Core\Response;
+
+class GuestMiddleware implements MiddlewareInterface
+{
+    public function handle(Request $request, Response $response, callable $next): void
+    {
+        // Guest routing rules will be enabled when authentication is implemented.
+        $next($request, $response);
+    }
+}

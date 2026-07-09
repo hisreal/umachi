@@ -2,62 +2,22 @@
 
 declare(strict_types=1);
 
-if (!function_exists('e')) {
-    function e(string|int|float|null $value): string
-    {
-        return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
-    }
+if (!defined('BASE_PATH')) {
+    define('BASE_PATH', dirname(__DIR__, 3));
 }
 
-if (!function_exists('app_base_url')) {
-    function app_base_url(): string
-    {
-        if (isset($GLOBALS['appBaseUrl'])) {
-            return rtrim((string) $GLOBALS['appBaseUrl'], '/');
-        }
-
-        $scriptName = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? '/umachi/index.php'));
-        $appPosition = strpos($scriptName, '/app/');
-
-        if ($appPosition !== false) {
-            return rtrim(substr($scriptName, 0, $appPosition), '/');
-        }
-
-        $publicPosition = strpos($scriptName, '/public/');
-
-        if ($publicPosition !== false) {
-            return rtrim(substr($scriptName, 0, $publicPosition), '/');
-        }
-
-        $basePath = rtrim(dirname($scriptName), '/');
-
-        return $basePath === '' || $basePath === '.' ? '' : $basePath;
-    }
+if (!defined('VIEW_PATH')) {
+    define('VIEW_PATH', dirname(__DIR__));
 }
 
-if (!function_exists('asset_url')) {
-    function asset_url(string $path): string
-    {
-        $assetBaseUrl = $GLOBALS['assetBaseUrl'] ?? app_base_url() . '/public/assets';
+$autoloadPath = BASE_PATH . '/bootstrap/autoload.php';
 
-        return rtrim($assetBaseUrl, '/') . '/' . ltrim($path, '/');
-    }
+if (!class_exists(\App\Services\AssetService::class) && is_file($autoloadPath)) {
+    require_once $autoloadPath;
 }
 
-if (!function_exists('route_url')) {
-    function route_url(string $route): string
-    {
-        $normalizedRoute = trim($route, '/');
-        $baseUrl = app_base_url();
-        $frontController = ($baseUrl === '' ? '' : $baseUrl) . '/index.php';
+$helpersPath = BASE_PATH . '/app/Helpers/functions.php';
 
-        return $frontController . '?route=' . rawurlencode($normalizedRoute);
-    }
-}
-
-if (!function_exists('view_path')) {
-    function view_path(string $path): string
-    {
-        return __DIR__ . '/../' . ltrim($path, '/');
-    }
+if (is_file($helpersPath)) {
+    require_once $helpersPath;
 }
