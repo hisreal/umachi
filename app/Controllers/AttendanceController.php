@@ -5,7 +5,17 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\Controller;
+use App\Core\Request;
+use App\Core\Response;
+use App\Core\Session;
 use App\Models\Attendance;
+use App\Models\LeaveManagement;
+use App\Models\Profile;
+use App\Services\AuthService;
+use App\Services\AttendanceDutyPolicyService;
+use App\Services\AttendantHistoryService;
+use App\Services\AttendantDutyService;
+use App\Services\DashboardService;
 
 class AttendanceController extends Controller
 {
@@ -18,93 +28,63 @@ class AttendanceController extends Controller
         $this->attendance = new Attendance();
     }
 
-    /**
-     * Load the staff dashboard overview.
-     */
     public function index(): void
     {
         $this->dashboard();
     }
 
-    /**
-     * Preserve the existing frontend fallback page.
-     */
     public function notFound(): void
     {
         $this->dashboard();
     }
 
-    /**
-     * Load the dashboard overview page with static summary data.
-     */
     public function dashboard(): void
     {
-        $this->renderStaticPage('dashboard', [
+        $auth = new AuthService();
+        $dutyPolicy = new AttendanceDutyPolicyService();
+        $isPumpAttendant = array_filter($auth->roles(), [$dutyPolicy, 'requiresManualDuty']) !== [];
+        $quickActions = [
+            ['title' => 'Clock In', 'description' => 'Start your work shift and record today\'s attendance.', 'route' => 'attendance/clock-in', 'icon' => 'fa-solid fa-fingerprint'],
+            ['title' => 'Clock Out', 'description' => $isPumpAttendant ? 'End your work shift and submit today\'s fuel sales.' : 'End your work shift and record today\'s attendance.', 'route' => 'attendance/clock-out', 'icon' => 'fa-solid fa-arrow-right-from-bracket'],
+            ['title' => 'Attendance History', 'description' => 'Review your attendance records and status.', 'route' => 'attendance/history', 'icon' => 'fa-solid fa-clock-rotate-left'],
+        ];
+        if ($isPumpAttendant) {
+            $quickActions[] = ['title' => 'Fuel Sales History', 'description' => 'Review your submitted and verified fuel sales.', 'route' => 'fuel-sales/history', 'icon' => 'fa-solid fa-receipt'];
+            $quickActions[] = ['title' => 'Duty Roster', 'description' => 'View your assigned shifts and pump schedule.', 'route' => 'duty-roster', 'icon' => 'fa-solid fa-calendar-days'];
+        }
+        $quickActions[] = ['title' => 'Apply Leave', 'description' => 'Submit and monitor your leave requests.', 'route' => 'leave-requests', 'icon' => 'fa-solid fa-calendar-plus'];
+        $quickActions[] = ['title' => 'Announcements', 'description' => 'Read the latest station notices and updates.', 'route' => 'announcements', 'icon' => 'fa-solid fa-bullhorn'];
+
+        $this->renderStaticPage('dashboard', array_merge((new DashboardService())->attendant(), [
             'pageTitle' => 'Dashboard | FuelOps Staff Dashboard',
             'pageHeading' => 'Dashboard',
-            'pageIntro' => 'Review today\'s shift status, assigned pump, and recent station activity.',
+            'pageIntro' => $isPumpAttendant ? 'Review today\'s shift status, assigned pump, and recent station activity.' : 'Record attendance and review recent station announcements.',
             'pageIcon' => 'fa-solid fa-gauge-high',
-            'extraStyles' => ['css/clock-in.css', 'css/dashboard.css'],
-            'quickActions' => [
-                [
-                    'title' => 'Clock In',
-                    'description' => 'Start your work shift and record today\'s attendance.',
-                    'route' => 'attendance/clock-in',
-                    'icon' => 'fa-solid fa-fingerprint',
-                ],
-                [
-                    'title' => 'Clock Out',
-                    'description' => 'End your work shift and submit today\'s fuel sales.',
-                    'route' => 'attendance/clock-out',
-                    'icon' => 'fa-solid fa-arrow-right-from-bracket',
-                ],
-                [
-                    'title' => 'Duty Roster',
-                    'description' => 'View your assigned shifts and pump schedule.',
-                    'route' => 'duty-roster',
-                    'icon' => 'fa-solid fa-calendar-days',
-                ],
-            ],
-            // DATABASE PLACEHOLDER
-            // Replace with announcements retrieved from the database.
-            'announcements' => [
-                [
-                    'title' => 'System Maintenance',
-                    'message' => 'The attendance system will undergo scheduled maintenance on Sunday from 11:00 PM to 1:00 AM.',
-                    'date' => '2026-07-04',
-                    'icon' => 'fa-solid fa-screwdriver-wrench',
-                ],
-                [
-                    'title' => 'Monthly Staff Meeting',
-                    'message' => 'All attendants are required to attend the monthly operations meeting on Monday at 9:00 AM.',
-                    'date' => '2026-07-07',
-                    'icon' => 'fa-solid fa-users',
-                ],
-                [
-                    'title' => 'Safety Reminder',
-                    'message' => 'Ensure all pump readings are verified before submitting your clock-out report.',
-                    'date' => '2026-07-08',
-                    'icon' => 'fa-solid fa-shield-halved',
-                ],
-            ],
-            'summaryCards' => [
-                ['label' => 'Current Shift', 'value' => 'Morning Shift'],
-                ['label' => 'Assigned Pump', 'value' => 'Pump 03 - PMS Lane'],
-                ['label' => 'Attendance Status', 'value' => 'Clocked In'],
-                ['label' => 'Pending Action', 'value' => 'Clock Out & Sales Entry'],
-            ],
-            'tableColumns' => ['Activity', 'Time', 'Status'],
-            'tableRows' => [
-                ['Clock In completed', '06:03 AM', 'Successful'],
-                ['Pump assignment confirmed', '06:05 AM', 'Active'],
-                ['Shift sales entry pending', '01:54 PM', 'Awaiting Clock Out'],
-            ],
-        ]);
+            'extraStyles' => ['css/clock-in.css', 'css/dashboard.css', 'css/admin-dashboard.css'],
+            'quickActions' => $quickActions,
+        ]));
     }
 
-    /**
-     * Load the clock-in frontend prototype with static staff data.
-     */
+    public function submitClockIn(): void
+    {
+        $this->handleAttendanceMutation(static function (Attendance $attendance): string {
+            $attendance->clockIn($_FILES);
+            Session::flash('attendance_success', 'Clock-In successful. Your attendance is pending verification.');
+
+            return route_url('attendance/clock-in');
+        }, route_url('attendance/clock-in'));
+    }
+
+    public function submitClockOut(): void
+    {
+        $this->handleAttendanceMutation(static function (Attendance $attendance, Request $request): string {
+            $attendance->clockOut($request->all(), $_FILES);
+            Session::flash('attendance_success', 'Clock-Out successful. Your attendance is pending verification.');
+
+            return route_url('attendance/clock-out');
+        }, route_url('attendance/clock-out'));
+    }
+
     public function clockIn(): void
     {
         $this->render('attendant/clock-in.php', [
@@ -112,120 +92,281 @@ class AttendanceController extends Controller
             'employee' => $this->attendance->getEmployee(),
             'attendanceStatus' => $this->attendance->getAttendanceStatus(),
             'attendanceHistory' => $this->attendance->getAttendanceHistory(),
+            'attendanceSuccess' => Session::pullFlash('attendance_success'),
+            'attendanceError' => Session::pullFlash('attendance_error'),
         ]);
     }
 
-    /**
-     * Load the clock-out and fuel sales frontend prototype with static data.
-     */
     public function clockOut(): void
     {
-        $this->render('attendant/clock-out.php', [
+        $auth = new AuthService();
+        $dutyPolicy = new AttendanceDutyPolicyService();
+        $isPumpAttendant = array_filter($auth->roles(), [$dutyPolicy, 'requiresManualDuty']) !== [];
+        $data = [
             'currentRoute' => 'attendance/clock-out',
             'employee' => $this->attendance->getEmployee(),
             'attendanceStatus' => $this->attendance->getAttendanceStatus(),
-            'clockOutOptions' => $this->attendance->getClockOutOptions(),
-            'fuelSalesSummary' => $this->attendance->getFuelSalesSummary(),
-            'previousShiftHistory' => $this->attendance->getPreviousShiftHistory(),
-        ]);
+            'canSubmitFuelSales' => $isPumpAttendant,
+            'attendanceSuccess' => Session::pullFlash('attendance_success'),
+            'attendanceError' => Session::pullFlash('attendance_error'),
+        ];
+        if ($isPumpAttendant) {
+            $data['clockOutOptions'] = $this->attendance->getClockOutOptions();
+            $data['fuelSalesSummary'] = $this->attendance->getFuelSalesSummary();
+            $data['previousShiftHistory'] = $this->attendance->getPreviousShiftHistory();
+        }
+        $this->render('attendant/clock-out.php', $data);
     }
 
-    /**
-     * Load attendance history as a routed page.
-     */
     public function attendanceHistoryPage(): void
     {
-        $this->render('attendant/attendance-history.php', [
-            'currentRoute' => 'attendance/history',
-        ]);
-    }
+        try {
+            $data = (new AttendantHistoryService())->attendance(Request::capture()->all());
+        } catch (\Throwable $exception) {
+            error_log('[Attendance History] ' . $exception->getMessage());
+            $data = ['historyError' => 'Attendance records are temporarily unavailable. Please try again.'];
+        }
 
-    /**
-     * Load the duty roster page with static sample data.
-     */
+        $this->render('attendant/attendance-history.php', array_merge(['currentRoute' => 'attendance/history'], $data));
+    }
     public function dutyRoster(): void
     {
-        $this->render('attendant/duty-roster.php', [
-            'currentRoute' => 'duty-roster',
-        ]);
-    }
+        try {
+            $data = (new AttendantDutyService())->data(Request::capture()->all());
+        } catch (\Throwable $exception) {
+            error_log('[Duty Roster] ' . $exception->getMessage());
+            $data = ['dutyError' => 'Duty assignments are temporarily unavailable. Please try again.'];
+        }
 
-    /**
-     * Load fuel sales history with static sample records.
-     */
+        $this->render('attendant/duty-roster.php', array_merge(['currentRoute' => 'duty-roster'], $data));
+    }
     public function fuelSalesHistory(): void
     {
-        $this->render('attendant/fuel-sales-history.php', [
-            'currentRoute' => 'fuel-sales/history',
+        try {
+            $data = (new AttendantHistoryService())->fuelSales(Request::capture()->all());
+        } catch (\Throwable $exception) {
+            error_log('[Fuel Sales History] ' . $exception->getMessage());
+            $data = ['historyError' => 'Fuel sales records are temporarily unavailable. Please try again.'];
+        }
+
+        $this->render('attendant/fuel-sales-history.php', array_merge(['currentRoute' => 'fuel-sales/history'], $data));
+    }
+
+    public function announcements(): void
+    {
+        $role = (string) Session::get('auth.role', '');
+        $this->render('attendant/announcements.php', [
+            'currentRoute' => 'announcements',
+            'employee' => $this->attendance->getEmployee(),
+            'announcements' => (new \App\Models\Announcement())->dashboardAnnouncements($role, 50),
         ]);
     }
 
-    /**
-     * Load leave management with static sample records.
-     */
     public function leaveRequests(): void
     {
-        $this->render('attendant/leave.php', [
+        $leave = new LeaveManagement();
+
+        $this->render('attendant/leave.php', array_merge([
             'currentRoute' => 'leave-requests',
-        ]);
+        ], $leave->employeeData(Request::capture()->all())));
     }
 
-    /**
-     * Load the staff profile page with static employee data.
-     */
+    public function submitLeaveRequest(): void
+    {
+        $this->handleLeaveMutation(static function (LeaveManagement $leave, Request $request): string {
+            $leave->submitRequest($request->all(), $_FILES);
+            Session::flash('leave_success', 'Leave request submitted successfully.');
+
+            return route_url('leave-requests');
+        }, route_url('leave-requests'));
+    }
+
+    public function cancelLeaveRequest(): void
+    {
+        $this->handleLeaveMutation(static function (LeaveManagement $leave, Request $request): string {
+            $leave->cancelOwnRequest((int) $request->post('request_id', 0));
+            Session::flash('leave_success', 'Leave request cancelled successfully.');
+            return route_url('leave-requests');
+        }, route_url('leave-requests'));
+    }
     public function profile(): void
     {
+        $profile = new Profile();
+
         $this->render('attendant/profile.php', [
             'currentRoute' => 'profile',
+            'employee' => $profile->currentUserProfile(),
+            'profileSummary' => $profile->profileSummary(),
+            'profileSuccess' => Session::pullFlash('profile_success'),
+            'profileError' => Session::pullFlash('profile_error'),
         ]);
     }
 
-    /**
-     * Load the frontend-only edit profile page with static employee data.
-     */
     public function editProfile(): void
     {
+        $profile = new Profile();
+
         $this->render('attendant/edit_profile.php', [
             'currentRoute' => 'profile',
+            'employee' => $profile->currentUserProfile(),
+            'profileSuccess' => Session::pullFlash('profile_success'),
+            'profileError' => Session::pullFlash('profile_error'),
         ]);
     }
 
-    /**
-     * Load settings with static preferences.
-     */
+    public function completeProfile(): void
+    {
+        $profile = new Profile();
+        $this->render('attendant/edit_profile.php', [
+            'currentRoute' => 'profile/complete',
+            'completionMode' => true,
+            'employee' => $profile->currentUserProfile(),
+            'profileSuccess' => Session::pullFlash('profile_success'),
+            'profileError' => Session::pullFlash('profile_error'),
+        ]);
+    }
+
+    public function storeCompletedProfile(): void
+    {
+        $request = Request::capture();
+        $response = new Response();
+        $auth = new AuthService();
+
+        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
+            Session::flash('profile_error', 'Your profile form expired. Please try again.');
+            $response->redirect(route_url('profile/complete'));
+        }
+
+        try {
+            (new Profile())->completeCurrentUser($request->all(), $_FILES);
+            Session::flash('profile_success', 'Your profile has been completed successfully.');
+            $response->redirect(route_url($auth->mustChangePassword() ? $auth->passwordChangeRoute() : 'dashboard'));
+        } catch (\RuntimeException $exception) {
+            Session::flash('profile_error', $exception->getMessage());
+            $response->redirect(route_url('profile/complete'));
+        } catch (\Throwable $exception) {
+            error_log('[Profile Completion] ' . $exception->getMessage());
+            Session::flash('profile_error', 'Profile completion could not be saved. Please try again.');
+            $response->redirect(route_url('profile/complete'));
+        }
+    }
+
+    public function updateProfile(): void
+    {
+        $request = Request::capture();
+        $response = new Response();
+        $auth = new AuthService();
+
+        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
+            Session::flash('profile_error', 'Your profile form expired. Please try again.');
+            $response->redirect(route_url('profile/edit'));
+        }
+
+        try {
+            (new Profile())->updateCurrentUser($request->all(), $_FILES);
+            Session::flash('profile_success', 'Profile updated successfully.');
+            $response->redirect(route_url('profile'));
+        } catch (\RuntimeException $exception) {
+            Session::flash('profile_error', $exception->getMessage());
+            $response->redirect(route_url('profile/edit'));
+        } catch (\Throwable $exception) {
+            error_log('[Profile] ' . $exception->getMessage());
+            Session::flash('profile_error', 'Profile could not be updated. Please try again.');
+            $response->redirect(route_url('profile/edit'));
+        }
+    }
+
+    public function changePassword(): void
+    {
+        $this->render('attendant/change-password.php', ['currentRoute' => 'profile/change-password']);
+    }
+
+    public function updatePassword(): void
+    {
+        $request = Request::capture();
+        $response = new Response();
+        $auth = new AuthService();
+
+        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
+            Session::flash('password_error', 'Your password form expired. Please try again.');
+            $response->redirect(route_url('profile/change-password'));
+        }
+
+        $result = $auth->changePassword(
+            (string) $request->post('current_password', ''),
+            (string) $request->post('new_password', ''),
+            (string) $request->post('confirm_password', '')
+        );
+
+        if (($result['success'] ?? false) === true) {
+            Session::flash('password_success', (string) $result['message']);
+            $response->redirect(route_url('dashboard'));
+        }
+
+        Session::flash('password_error', (string) ($result['message'] ?? 'Password could not be updated.'));
+        $response->redirect(route_url('profile/change-password'));
+    }
+
     public function settings(): void
     {
         $this->renderStaticPage('settings', [
             'pageTitle' => 'Settings | FuelOps Staff Dashboard',
             'pageHeading' => 'Settings',
-            'pageIntro' => 'Review sample account and notification preferences.',
+            'pageIntro' => 'Review account and notification preferences.',
             'pageIcon' => 'fa-solid fa-gear',
-            'summaryCards' => [
-                ['label' => 'Account Status', 'value' => 'Active'],
-                ['label' => 'Notifications', 'value' => 'Enabled'],
-                ['label' => 'Language', 'value' => 'English'],
-                ['label' => 'Theme', 'value' => 'FuelOps Default'],
-            ],
-            'tableColumns' => ['Setting', 'Current Value', 'Status'],
-            'tableRows' => [
-                ['SMS Alerts', 'Enabled', 'Active'],
-                ['Email Alerts', 'Enabled', 'Active'],
-                ['Password Review', 'Required every 90 days', 'Configured'],
-            ],
         ]);
     }
-
-    /**
-     * Return static attendance records for display.
-     */
     public function attendanceHistory(): array
     {
         return $this->attendance->getAttendanceHistory();
     }
 
-    /**
-     * Render one of the simple routed dashboard pages.
-     */
+    private function handleAttendanceMutation(callable $callback, string $fallbackUrl): void
+    {
+        $request = Request::capture();
+        $response = new Response();
+        $auth = new AuthService();
+
+        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
+            Session::flash('attendance_error', 'Your attendance form expired. Please try again.');
+            $response->redirect($fallbackUrl);
+        }
+
+        try {
+            $response->redirect((string) $callback($this->attendance, $request));
+        } catch (\RuntimeException $exception) {
+            Session::flash('attendance_error', $exception->getMessage());
+            $response->redirect($fallbackUrl);
+        } catch (\Throwable $exception) {
+            error_log('[Attendance] ' . $exception->getMessage());
+            Session::flash('attendance_error', 'Attendance action failed. Please try again or contact your supervisor.');
+            $response->redirect($fallbackUrl);
+        }
+    }
+
+    private function handleLeaveMutation(callable $callback, string $fallbackUrl): void
+    {
+        $request = Request::capture();
+        $response = new Response();
+        $auth = new AuthService();
+
+        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
+            Session::flash('leave_error', 'Your leave form expired. Please try again.');
+            $response->redirect($fallbackUrl);
+        }
+
+        try {
+            $response->redirect((string) $callback(new LeaveManagement(), $request));
+        } catch (\RuntimeException $exception) {
+            Session::flash('leave_error', $exception->getMessage());
+            $response->redirect($fallbackUrl);
+        } catch (\Throwable $exception) {
+            error_log('[Leave] ' . $exception->getMessage());
+            Session::flash('leave_error', 'Leave request could not be submitted. Please try again or contact your supervisor.');
+            $response->redirect($fallbackUrl);
+        }
+    }
+
     private function renderStaticPage(string $route, array $data): void
     {
         $this->render('attendant/dashboard-page.php', array_merge([

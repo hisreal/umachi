@@ -1,9 +1,14 @@
-﻿(function () {
+(function () {
     'use strict';
 
     const form = document.getElementById('editProfileForm');
     const cancelButton = document.getElementById('cancelEditProfileBtn');
-    const demoButtons = document.querySelectorAll('[data-edit-profile-demo-action]');
+    const photoInput = document.getElementById('passportPhoto');
+    const photoPreview = document.querySelector('.profile-passport');
+    const removePhotoInput = document.getElementById('removePhoto');
+    const changePhotoButton = document.querySelector('[data-edit-profile-action="change-photo"]');
+    const clearPhotoButton = document.querySelector('[data-edit-profile-action="clear-photo"]');
+   const originalPhoto = photoPreview ? photoPreview.src : '';
 
     const showAlert = (icon, title, text) => {
         if (window.Swal) {
@@ -19,35 +24,53 @@
         return Promise.resolve({ isConfirmed: true });
     };
 
-    demoButtons.forEach((button) => {
-        button.addEventListener('click', () => {
-            const action = button.dataset.editProfileDemoAction;
-            const title = action === 'remove-photo' ? 'Remove Photo (Demo)' : 'Change Photo (Demo)';
-            const text = action === 'remove-photo'
-                ? 'Photo removal will be connected during backend integration.'
-                : 'Photo upload and preview will be connected during backend integration.';
+    if (changePhotoButton && photoInput) {
+        changePhotoButton.addEventListener('click', () => photoInput.click());
+    }
 
-            showAlert('info', title, text);
+    if (clearPhotoButton && photoInput && photoPreview) {
+        clearPhotoButton.addEventListener('click', () => {
+            photoInput.value = '';
+            if (removePhotoInput) removePhotoInput.value = '1';
+            photoPreview.src = window.defaultProfilePhoto || originalPhoto;
         });
-    });
+    }
 
-    if (form) {
-        form.addEventListener('submit', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-
-            form.classList.add('was-validated');
-
-            if (!form.checkValidity()) {
-                showAlert('warning', 'Check Required Fields', 'Please complete all required profile fields before saving.');
+    if (photoInput && photoPreview) {
+        photoInput.addEventListener('change', () => {
+            if (removePhotoInput) removePhotoInput.value = '0';
+            const file = photoInput.files && photoInput.files[0] ? photoInput.files[0] : null;
+            if (!file) {
+                photoPreview.src = originalPhoto;
                 return;
             }
 
-            // =======================================
-            // DATABASE PLACEHOLDER
-            // Save updated employee information to the database.
-            // =======================================
-            showAlert('success', 'Profile updated successfully (Demo Mode)', 'No database changes were made.');
+            const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+            if (!allowedTypes.includes(file.type)) {
+                photoInput.value = '';
+                showAlert('warning', 'Invalid Image', 'Please choose a JPG, PNG, or WEBP profile photo.');
+                return;
+            }
+
+            if (file.size > 5 * 1024 * 1024) {
+                photoInput.value = '';
+                showAlert('warning', 'Image Too Large', 'Profile photo must not be larger than 5 MB.');
+                return;
+            }
+
+            photoPreview.src = URL.createObjectURL(file);
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', (event) => {
+            form.classList.add('was-validated');
+
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+                showAlert('warning', 'Check Required Fields', 'Please complete all required profile fields before saving.');
+            }
         });
     }
 
@@ -58,11 +81,10 @@
             }
 
             event.preventDefault();
-
             window.Swal.fire({
                 icon: 'question',
                 title: 'Cancel Edit?',
-                text: 'Your demo changes will be discarded.',
+                text: 'Your unsaved profile changes will be discarded.',
                 showCancelButton: true,
                 confirmButtonText: 'Yes, cancel',
                 cancelButtonText: 'Keep editing',

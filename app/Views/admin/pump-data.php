@@ -2,27 +2,57 @@
 
 declare(strict_types=1);
 
-// ===========================================
-// DATABASE PLACEHOLDER
-// Retrieve pumps from MySQL.
-// ===========================================
-$pumps = [
-    ['id' => 1, 'pump_number' => 'Pump 1', 'pump_name' => 'Main Forecourt Pump', 'fuel_type' => 'Petrol (PMS)', 'status' => 'Active', 'meter' => 125000, 'last_updated' => '2026-07-08 02:15 PM', 'manufacturer' => 'Gilbarco', 'model' => 'Encore 700S', 'serial_number' => 'GLB-700S-001', 'installation_date' => '2022-01-15', 'notes' => 'Primary PMS dispenser on the main forecourt.'],
-    ['id' => 2, 'pump_number' => 'Pump 2', 'pump_name' => 'Diesel Pump', 'fuel_type' => 'Diesel (AGO)', 'status' => 'Under Maintenance', 'meter' => 84500, 'last_updated' => '2026-07-08 01:50 PM', 'manufacturer' => 'Wayne', 'model' => 'Helix 6000', 'serial_number' => 'WYN-HLX-002', 'installation_date' => '2022-03-10', 'notes' => 'Scheduled nozzle and calibration inspection.'],
-    ['id' => 3, 'pump_number' => 'Pump 3', 'pump_name' => 'Side Lane Pump', 'fuel_type' => 'Petrol (PMS)', 'status' => 'Active', 'meter' => 98590, 'last_updated' => '2026-07-08 02:05 PM', 'manufacturer' => 'Tokheim', 'model' => 'Quantium 510', 'serial_number' => 'TKH-Q510-003', 'installation_date' => '2023-06-18', 'notes' => 'Serves the side lane during peak traffic.'],
-    ['id' => 4, 'pump_number' => 'Pump 4', 'pump_name' => 'Gas Pump', 'fuel_type' => 'Gas (LPG)', 'status' => 'Inactive', 'meter' => 45220, 'last_updated' => '2026-07-07 10:20 PM', 'manufacturer' => 'Tatsuno', 'model' => 'Sunny GL', 'serial_number' => 'TAT-SGL-004', 'installation_date' => '2024-02-02', 'notes' => 'Inactive pending final safety clearance.'],
+use App\Core\Request;
+use App\Core\Session;
+use App\Models\Pump;
+use App\Services\PumpManagementService;
+
+$pumpModel = new Pump();
+$canManagePumps = (new PumpManagementService($pumpModel))->canManage();
+$request = Request::capture();
+$pumpFilters = [
+    'search' => (string) $request->query('search', ''),
+    'fuel_type' => (string) $request->query('fuel_type', ''),
+    'status' => (string) $request->query('status', ''),
+    'manufacturer' => (string) $request->query('manufacturer', ''),
+    'year' => (string) $request->query('year', ''),
+    'sort' => (string) $request->query('sort', 'pump_number'),
+    'direction' => (string) $request->query('direction', 'asc'),
+    'page' => (int) $request->query('page', 1),
+    'per_page' => 20,
 ];
 
-$fuelTypes = ['Petrol (PMS)', 'Diesel (AGO)', 'Gas (LPG)'];
-$pumpStatuses = ['Active', 'Inactive', 'Under Maintenance', 'Faulty'];
+$pumpResult = $pumpModel->paginated($pumpFilters);
+$pumps = $pumpResult['records'];
+$pagination = $pumpResult['pagination'];
+$pumpOptions = $pumpModel->filters();
+$fuelTypes = $pumpOptions['fuel_types'];
+$pumpStatuses = $pumpOptions['statuses'];
+$pumpManufacturers = $pumpOptions['manufacturers'];
+$installationYears = $pumpOptions['years'];
+$pumpSuccess = Session::pullFlash('pump_success');
+$pumpError = Session::pullFlash('pump_error');
 
-$selectedPump = $pumps[0];
-$requestedPumpId = (int) ($_GET['pump'] ?? 0);
-foreach ($pumps as $pumpRecord) {
-    if ($pumpRecord['id'] === $requestedPumpId) {
-        $selectedPump = $pumpRecord;
-        break;
-    }
+$selectedPump = null;
+$requestedPumpId = (int) $request->query('pump', 0);
+if ($requestedPumpId > 0) {
+    $selectedPump = $pumpModel->findForView($requestedPumpId);
+}
+
+if ($selectedPump === null) {
+    $selectedPump = [
+        'id' => 0,
+        'pump_number' => '',
+        'pump_name' => '',
+        'fuel_type' => '',
+        'status' => 'Active',
+        'manufacturer' => '',
+        'model' => '',
+        'serial_number' => '',
+        'installation_date' => date('Y-m-d'),
+        'meter' => '',
+        'notes' => '',
+    ];
 }
 
 $pumpStatusClasses = [
@@ -32,10 +62,14 @@ $pumpStatusClasses = [
     'Faulty' => 'pump-status--faulty',
 ];
 
+$summary = $pumpModel->summary();
 $pumpStats = [
-    ['label' => 'Total Pumps', 'value' => count($pumps) . ' Pumps', 'icon' => 'fa-solid fa-gas-pump', 'tone' => 'primary'],
-    ['label' => 'Active Pumps', 'value' => count(array_filter($pumps, static fn (array $pump): bool => $pump['status'] === 'Active')) . ' Active', 'icon' => 'fa-solid fa-circle-check', 'tone' => 'success'],
-    ['label' => 'Inactive Pumps', 'value' => count(array_filter($pumps, static fn (array $pump): bool => $pump['status'] === 'Inactive')) . ' Inactive', 'icon' => 'fa-solid fa-circle-pause', 'tone' => 'danger'],
-    ['label' => 'Pumps Under Maintenance', 'value' => count(array_filter($pumps, static fn (array $pump): bool => $pump['status'] === 'Under Maintenance')) . ' Pump', 'icon' => 'fa-solid fa-screwdriver-wrench', 'tone' => 'warning'],
-    ['label' => 'Fuel Distribution', 'value' => '2 Petrol / 1 Diesel / 1 Gas', 'icon' => 'fa-solid fa-chart-pie', 'tone' => 'info'],
+    ['label' => 'Total Pumps', 'value' => $summary['total'] . ' Pumps', 'icon' => 'fa-solid fa-gas-pump', 'tone' => 'primary'],
+    ['label' => 'Active Pumps', 'value' => $summary['active'] . ' Active', 'icon' => 'fa-solid fa-circle-check', 'tone' => 'success'],
+    ['label' => 'Inactive Pumps', 'value' => $summary['inactive'] . ' Inactive', 'icon' => 'fa-solid fa-circle-pause', 'tone' => 'danger'],
+    ['label' => 'Pumps Under Maintenance', 'value' => $summary['maintenance'] . ' Pump', 'icon' => 'fa-solid fa-screwdriver-wrench', 'tone' => 'warning'],
+    ['label' => 'Faulty Pumps', 'value' => $summary['faulty'] . ' Faulty', 'icon' => 'fa-solid fa-triangle-exclamation', 'tone' => 'danger'],
+    ['label' => 'Fuel Distribution', 'value' => $summary['petrol'] . ' Petrol / ' . $summary['diesel'] . ' Diesel / ' . $summary['gas'] . ' Gas', 'icon' => 'fa-solid fa-chart-pie', 'tone' => 'info'],
 ];
+
+$exportQuery = http_build_query(array_filter($pumpFilters, static fn (mixed $value): bool => $value !== '' && $value !== null && $value !== 1 && $value !== 20));

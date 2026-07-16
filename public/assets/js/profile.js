@@ -1,30 +1,14 @@
-﻿(function () {
+(function () {
     'use strict';
 
-    const demoButtons = document.querySelectorAll('[data-profile-demo-action]');
+    const editButtons = document.querySelectorAll('[data-profile-edit-action]');
+    const editLink = document.querySelector('.profile-edit-btn');
 
-    const showDemoMessage = (action) => {
-        const title = action === 'remove-photo' ? 'Remove Photo (Demo)' : 'Change Photo (Demo)';
-        const text = action === 'remove-photo'
-            ? 'Photo removal will be connected during backend integration.'
-            : 'Photo upload and preview will be connected during backend integration.';
-
-        if (window.Swal) {
-            window.Swal.fire({
-                icon: 'info',
-                title,
-                text,
-                confirmButtonColor: '#F68B34',
-            });
-            return;
-        }
-
-        window.alert(`${title}\n\n${text}`);
-    };
-
-    demoButtons.forEach((button) => {
+    editButtons.forEach((button) => {
         button.addEventListener('click', () => {
-            showDemoMessage(button.dataset.profileDemoAction || 'change-photo');
+            if (editLink && editLink.href) {
+                window.location.href = editLink.href;
+            }
         });
     });
 })();

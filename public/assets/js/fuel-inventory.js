@@ -6,6 +6,35 @@
         window.alert(`${title}\n${text}`);
     };
     const normalize = (value) => String(value || '').trim().toLowerCase();
+    const tableRows = () => Array.from(document.querySelectorAll('.inventory-table tbody tr')).filter((row) => !row.hidden);
+    const tableHeaders = () => Array.from(document.querySelectorAll('.inventory-table thead th')).map((cell) => cell.textContent.trim());
+    const tableData = () => tableRows().map((row) => Array.from(row.children).map((cell) => cell.textContent.replace(/\s+/g, ' ').trim()));
+    const downloadFile = (filename, mimeType, content) => {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+    };
+    const csvEscape = (value) => `"${String(value).replace(/"/g, '""')}"`;
+    const exportInventory = (type) => {
+        const headers = tableHeaders();
+        const data = tableData();
+        if (headers.length === 0 || data.length === 0) { showAlert('warning', 'No Records', 'There are no visible inventory records to export.'); return; }
+        const normalizedType = normalize(type);
+        if (normalizedType === 'pdf') { window.print(); return; }
+        if (normalizedType === 'excel') {
+            const html = `<table><thead><tr>${headers.map((header) => `<th>${header}</th>`).join('')}</tr></thead><tbody>${data.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+            downloadFile(`fuel-inventory-${Date.now()}.xls`, 'application/vnd.ms-excel', html);
+            return;
+        }
+        const csv = [headers, ...data].map((row) => row.map(csvEscape).join(',')).join('\n');
+        downloadFile(`fuel-inventory-${Date.now()}.csv`, 'text/csv;charset=utf-8', csv);
+    };
     const form = document.getElementById('fuelDeliveryForm');
     const quantityInput = document.getElementById('quantityDelivered');
     const costInput = document.getElementById('costPerLiter');
@@ -17,11 +46,7 @@
     [quantityInput, costInput].forEach((input) => { if (input) { input.addEventListener('input', calculateTotalCost); } });
     if (form) {
         form.addEventListener('submit', (event) => {
-            event.preventDefault();
-            if (!form.checkValidity()) { form.classList.add('was-validated'); showAlert('error', 'Incomplete Delivery Form', 'Please complete all required delivery fields before saving.'); return; }
-            // DATABASE PLACEHOLDER: Save fuel delivery.
-            showAlert('success', 'Fuel Delivery Saved (Demo Mode)', 'This frontend sample is ready for future database persistence.');
-            form.reset(); form.classList.remove('was-validated'); calculateTotalCost();
+            if (!form.checkValidity()) { event.preventDefault(); form.classList.add('was-validated'); showAlert('error', 'Incomplete Delivery Form', 'Please complete all required delivery fields before saving.'); }
         });
         form.addEventListener('reset', () => { window.setTimeout(calculateTotalCost, 0); });
     }
@@ -54,18 +79,17 @@
         const cancelButton = event.target.closest('[data-inventory-action="cancel-form"]');
         if (cancelButton && form) { form.reset(); form.classList.remove('was-validated'); calculateTotalCost(); return; }
         const exportButton = event.target.closest('[data-inventory-export]');
-        if (exportButton) { showAlert('info', `Export ${exportButton.dataset.inventoryExport} (Demo Mode)`, 'Inventory export will be generated after backend reporting is connected.'); return; }
+        if (exportButton) { exportInventory(exportButton.dataset.inventoryExport || 'CSV'); return; }
         const actionButton = event.target.closest('[data-inventory-action]');
         if (!actionButton) { return; }
         const action = actionButton.dataset.inventoryAction;
         const delivery = actionButton.dataset.delivery || 'delivery record';
         if (action === 'delete') {
-            if (window.Swal) { window.Swal.fire({ icon: 'warning', title: 'Delete delivery record?', text: `${delivery} will only be removed after backend integration.`, showCancelButton: true, confirmButtonText: 'Delete (Demo)', cancelButtonText: 'Cancel', confirmButtonColor: '#ed3237', cancelButtonColor: '#667085' }).then((result) => { if (result.isConfirmed) { showAlert('success', 'Delete Confirmed (Demo Mode)', 'Database deletion will be connected later.'); } }); return; }
-            window.alert('Delete confirmation will be connected later.'); return;
+            showAlert('info', 'Delete Not Available', 'Use a controlled inventory adjustment to correct stock records.');
+            return;
         }
-        showAlert('info', `${action.replace('-', ' ')} Delivery (Demo Mode)`, `${delivery} will open in a future backend workflow.`);
-    });
-    const chartRoot = document.querySelector('[data-inventory-chart-data]');
+        showAlert('info', `${action.replace('-', ' ')} Delivery`, `${delivery} is recorded in the inventory audit trail.`);
+    });    const chartRoot = document.querySelector('[data-inventory-chart-data]');
     if (chartRoot && window.Chart) {
         let chartData = null;
         try { chartData = JSON.parse(chartRoot.dataset.inventoryChartData || '{}'); } catch (error) { chartData = null; }
@@ -76,3 +100,4 @@
         if (chartData && document.getElementById('inventoryDistributionChart')) { new window.Chart(document.getElementById('inventoryDistributionChart'), { type: 'pie', data: { labels: chartData.distribution.labels, datasets: [{ data: chartData.distribution.values, backgroundColor: colors, borderColor: '#fff', borderWidth: 3 }] }, options: { responsive: true, maintainAspectRatio: false } }); }
     }
 }());
+

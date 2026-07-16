@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     'use strict';
 
     const searchInput = document.getElementById('rosterSearch');
@@ -9,7 +9,7 @@
     const prevButton = document.getElementById('rosterPrevPage');
     const nextButton = document.getElementById('rosterNextPage');
     const calendarDays = document.querySelectorAll('[data-calendar-day]');
-    const pageSize = 5;
+    const pageSize = 1000;
     let currentPage = 1;
 
     const showAlert = (title, text) => {
@@ -31,7 +31,7 @@
     const getFilteredRows = () => {
         const search = normalize(searchInput.value);
         const shift = shiftFilter.value;
-        const status = statusFilter.value;
+        const status = statusFilter ? statusFilter.value : '';
 
         return rows.filter((row) => {
             const matchesSearch = !search || normalize(row.textContent).includes(search) || normalize(row.dataset.date).includes(search);
@@ -96,8 +96,8 @@
 
     calendarDays.forEach((day) => {
         day.addEventListener('click', () => {
-            const label = `July ${day.dataset.calendarDay}, 2026`;
-            showAlert(label, `${day.dataset.calendarShift} shift assignment shown for display only.`);
+            const label = `Duty Assignment - Day ${day.dataset.calendarDay}`;
+            showAlert(label, day.dataset.calendarDetails || 'No duty assigned.');
         });
     });
 

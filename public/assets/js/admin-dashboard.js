@@ -148,7 +148,7 @@
 
         const { context, width, height } = canvasState;
         const padding = 34;
-        const max = Math.max(...data.values);
+        const max = Math.max(...data.values.map((value) => Number(value) || 0), 1);
         const barArea = width - padding * 2;
         const barWidth = Math.max(18, barArea / data.values.length - 14);
 
@@ -165,6 +165,9 @@
             context.roundRect(x, y, barWidth, barHeight, 8);
             context.fill();
             drawText(context, data.labels[index].slice(0, 3), x + barWidth / 2, height - 10);
+            if (Array.isArray(data.litres)) {
+                drawText(context, Number(data.litres[index] || 0).toLocaleString() + ' L', x + barWidth / 2, Math.max(y - 8, 12), { color: '#101828', font: '700 10px Arial' });
+            }
         });
     };
 
@@ -176,7 +179,7 @@
 
         const { context, width, height } = canvasState;
         const colors = ['#f68b34', '#ed3237', '#0ea5e9', '#16a34a', '#7c3aed'];
-        const total = data.values.reduce((sum, value) => sum + value, 0);
+        const total = Math.max(data.values.reduce((sum, value) => sum + (Number(value) || 0), 0), 1);
         const centerX = width / 2;
         const centerY = height / 2 - 8;
         const radius = Math.min(width, height) / 3.2;
@@ -219,52 +222,9 @@
         drawLineChart(document.getElementById('attendanceChart'), chartData.attendance);
         drawBarChart(document.getElementById('salesChart'), chartData.sales);
         drawDoughnutChart(document.getElementById('leaveChart'), chartData.leave);
+        drawLineChart(document.getElementById('inventoryChart'), chartData.inventory);
     };
 
-    document.addEventListener('click', (event) => {
-        const logoutLink = event.target.closest('[data-admin-logout="true"]');
-        if (!logoutLink) {
-            return;
-        }
-
-        event.preventDefault();
-
-        if (window.Swal) {
-            window.Swal.fire({
-                icon: 'question',
-                title: 'Are you sure you want to log out?',
-                text: 'This is a frontend-only demo confirmation.',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, Logout',
-                cancelButtonText: 'Cancel',
-                confirmButtonColor: '#ed3237',
-                cancelButtonColor: '#667085',
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.Swal.fire({
-                        icon: 'success',
-                        title: 'Logout Confirmed (Demo Mode)',
-                        text: 'Backend logout logic will be connected later.',
-                        confirmButtonColor: '#f68b34',
-                    });
-                }
-            });
-            return;
-        }
-
-        window.alert('Logout confirmation will be connected later.');
-    });
-    document.addEventListener('click', (event) => {
-        const leaveButton = event.target.closest('[data-leave-action]');
-        if (!leaveButton) {
-            return;
-        }
-
-        const action = leaveButton.dataset.leaveAction;
-        const employee = leaveButton.dataset.employee;
-        const title = action === 'approve' ? 'Leave Approved (Demo Mode)' : 'Leave Rejected (Demo Mode)';
-        showAlert('success', title, `${employee}'s leave request would be ${action}d after backend integration.`);
-    });
 
     if (markReadButton) {
         markReadButton.addEventListener('click', () => {
@@ -275,7 +235,7 @@
                     badge.remove();
                 }
             });
-            showAlert('success', 'Notifications Updated', 'All notifications have been marked as read in demo mode.');
+            showAlert('success', 'Notifications Updated', 'All notifications have been marked as read for this view.');
         });
     }
 
@@ -284,3 +244,5 @@
     drawCharts();
     window.addEventListener('resize', drawCharts);
 }());
+
+

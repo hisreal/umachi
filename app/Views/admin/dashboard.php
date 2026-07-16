@@ -2,6 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Models\Announcement;
+
 $pageTitle = 'Admin Dashboard | FuelOps Management System';
 $pageHeading = 'Dashboard';
 $topbarSubtitle = 'Admin Dashboard';
@@ -9,20 +11,8 @@ $currentRoute = $currentRoute ?? 'admin/dashboard';
 $extraStyles = ['css/clock-in.css', 'css/admin-dashboard.css'];
 $extraScripts = ['js/admin-dashboard.js'];
 
-// =========================================
-// DATABASE PLACEHOLDER
-// Replace this sample administrator record
-// with authenticated user data from MySQL.
-// =========================================
-$adminUser = [
-    'name' => 'Administrator',
-    'role' => 'System Administrator',
-];
-
-$employee = [
-    'name' => $adminUser['name'],
-    'role' => $adminUser['role'],
-];
+$adminUser = $adminUser ?? ['name' => 'Administrator', 'role' => 'Administrator'];
+$employee = ['name' => $adminUser['name'], 'role' => $adminUser['role']];
 $attendantName = $adminUser['name'];
 $attendantRole = $adminUser['role'];
 
@@ -32,99 +22,84 @@ $sidebarBrandTitle = 'FuelOps';
 $sidebarBrandSubtitle = 'Admin Panel';
 $navItems = $navItems ?? require __DIR__ . '/../includes/admin-nav.php';
 
-// =========================================
-// DATABASE PLACEHOLDER
-// Load dashboard statistics from MySQL
-// =========================================
-$dashboard = [
-    'employees' => 16,
-    'present' => 14,
-    'absent' => 2,
-    'leave' => 1,
-    'sales' => 4850000,
-    'liters' => 8750,
-    'pending_leave' => 4,
-    'active_pumps' => 4,
-    'total_pumps' => 4,
-    'current_shift' => 'Morning Shift',
-    'announcements' => 3,
+$dashboard = $dashboard ?? [];
+$dashboardSections = $dashboardSections ?? [
+    'employees' => true,
+    'attendance' => true,
+    'sales' => true,
+    'inventory' => true,
+    'pumps' => true,
+    'duty' => true,
+    'leave' => true,
+    'announcements' => true,
+    'notifications' => true,
+    'reports' => true,
 ];
-
 $kpiCards = [
-    ['label' => 'Total Employees', 'value' => $dashboard['employees'] . ' Employees', 'icon' => 'fa-solid fa-users', 'tone' => 'primary'],
-    ['label' => 'Employees Present Today', 'value' => $dashboard['present'] . ' Present', 'icon' => 'fa-solid fa-user-check', 'tone' => 'success'],
-    ['label' => 'Employees Absent', 'value' => $dashboard['absent'] . ' Absent', 'icon' => 'fa-solid fa-user-xmark', 'tone' => 'danger'],
-    ['label' => 'Employees on Leave', 'value' => $dashboard['leave'] . ' Employee', 'icon' => 'fa-solid fa-calendar-days', 'tone' => 'warning'],
-    ['label' => 'Today\'s Fuel Sales', 'value' => 'NGN ' . number_format($dashboard['sales']), 'icon' => 'fa-solid fa-money-bill-trend-up', 'tone' => 'info'],
-    ['label' => 'Total Liters Sold Today', 'value' => number_format($dashboard['liters']) . ' Liters', 'icon' => 'fa-solid fa-gas-pump', 'tone' => 'secondary'],
-    ['label' => 'Pending Leave Requests', 'value' => $dashboard['pending_leave'] . ' Requests', 'icon' => 'fa-solid fa-clipboard-list', 'tone' => 'orange'],
-    ['label' => 'Active Pumps', 'value' => $dashboard['active_pumps'] . ' / ' . $dashboard['total_pumps'] . ' Active', 'icon' => 'fa-solid fa-gas-pump', 'tone' => 'success'],
-    ['label' => 'Current Shift', 'value' => $dashboard['current_shift'], 'icon' => 'fa-solid fa-clock', 'tone' => 'dark'],
-    ['label' => 'System Announcements', 'value' => $dashboard['announcements'] . ' New Announcements', 'icon' => 'fa-solid fa-bullhorn', 'tone' => 'purple'],
+    ['label' => 'Total Employees', 'value' => number_format((int) ($dashboard['employees'] ?? 0)), 'icon' => 'fa-solid fa-users', 'tone' => 'primary'],
+    ['label' => 'Active Employees', 'value' => number_format((int) ($dashboard['active_employees'] ?? 0)), 'icon' => 'fa-solid fa-user-check', 'tone' => 'success'],
+    ['label' => 'Employees Present Today', 'value' => number_format((int) ($dashboard['present'] ?? 0)), 'icon' => 'fa-solid fa-user-clock', 'tone' => 'success'],
+    ['label' => 'Employees Absent Today', 'value' => number_format((int) ($dashboard['absent'] ?? 0)), 'icon' => 'fa-solid fa-user-xmark', 'tone' => 'danger'],
+    ['label' => 'Employees Currently on Leave', 'value' => number_format((int) ($dashboard['leave'] ?? 0)), 'icon' => 'fa-solid fa-calendar-days', 'tone' => 'warning'],
+    ['label' => "Today's Fuel Sales", 'value' => 'NGN ' . number_format((float) ($dashboard['sales'] ?? 0), 2), 'icon' => 'fa-solid fa-money-bill-trend-up', 'tone' => 'info'],
+    ['label' => "Today's Litres Sold", 'value' => number_format((float) ($dashboard['litres'] ?? 0), 2) . ' L', 'icon' => 'fa-solid fa-gas-pump', 'tone' => 'secondary'],
+    ['label' => 'Available Petrol', 'value' => number_format((float) ($dashboard['petrol'] ?? 0), 2) . ' L', 'icon' => 'fa-solid fa-droplet', 'tone' => 'primary'],
+    ['label' => 'Available Diesel', 'value' => number_format((float) ($dashboard['diesel'] ?? 0), 2) . ' L', 'icon' => 'fa-solid fa-oil-can', 'tone' => 'warning'],
+    ['label' => 'Available Gas', 'value' => number_format((float) ($dashboard['gas'] ?? 0), 2) . ' L', 'icon' => 'fa-solid fa-fire-flame-simple', 'tone' => 'info'],
+    ['label' => 'Active Pumps', 'value' => (int) ($dashboard['active_pumps'] ?? 0) . ' / ' . (int) ($dashboard['total_pumps'] ?? 0), 'icon' => 'fa-solid fa-gas-pump', 'tone' => 'success'],
+    ['label' => 'Pumps Under Maintenance', 'value' => number_format((int) ($dashboard['maintenance_pumps'] ?? 0)), 'icon' => 'fa-solid fa-screwdriver-wrench', 'tone' => 'danger'],
+    ['label' => 'Pending Leave Requests', 'value' => number_format((int) ($dashboard['pending_leave'] ?? 0)), 'icon' => 'fa-solid fa-clipboard-list', 'tone' => 'orange'],
+    ['label' => 'Pending Sales Verification', 'value' => number_format((int) ($dashboard['pending_sales'] ?? 0)), 'icon' => 'fa-solid fa-circle-check', 'tone' => 'warning'],
+    ['label' => "Today's Duty Assignments", 'value' => number_format((int) ($dashboard['duty_assignments'] ?? 0)), 'icon' => 'fa-solid fa-calendar-check', 'tone' => 'purple'],
+    ['label' => 'Current Shift', 'value' => (string) ($dashboard['current_shift'] ?? 'No active shift'), 'icon' => 'fa-solid fa-clock', 'tone' => 'dark'],
 ];
 
-// =========================================
-// DATABASE PLACEHOLDER
-// Retrieve attendance, fuel sales, leave
-// requests, announcements, and notifications.
-// =========================================
-$attendanceRecords = [
-    ['employee' => 'John Doe', 'role' => 'Pump Attendant', 'clock_in' => '06:02 AM', 'shift' => 'Morning', 'status' => 'Present'],
-    ['employee' => 'Mary Johnson', 'role' => 'Cashier', 'clock_in' => '06:08 AM', 'shift' => 'Morning', 'status' => 'Present'],
-    ['employee' => 'Daniel James', 'role' => 'Pump Attendant', 'clock_in' => '06:14 AM', 'shift' => 'Morning', 'status' => 'Late'],
-    ['employee' => 'Esther Grace', 'role' => 'Supervisor', 'clock_in' => '05:54 AM', 'shift' => 'Morning', 'status' => 'Present'],
+$kpiSections = [
+    'Total Employees' => 'employees',
+    'Active Employees' => 'employees',
+    'Employees Present Today' => 'attendance',
+    'Employees Absent Today' => 'attendance',
+    'Employees Currently on Leave' => 'leave',
+    "Today's Fuel Sales" => 'sales',
+    "Today's Litres Sold" => 'sales',
+    'Available Petrol' => 'inventory',
+    'Available Diesel' => 'inventory',
+    'Available Gas' => 'inventory',
+    'Active Pumps' => 'pumps',
+    'Pumps Under Maintenance' => 'pumps',
+    'Pending Leave Requests' => 'leave',
+    'Pending Sales Verification' => 'sales',
+    "Today's Duty Assignments" => 'duty',
+    'Current Shift' => 'duty',
 ];
-
-$fuelSales = [
-    ['pump' => 'Pump 1', 'fuel_type' => 'Petrol (PMS)', 'attendant' => 'John Doe', 'liters' => 2250, 'amount' => 1250000, 'shift' => 'Morning'],
-    ['pump' => 'Pump 2', 'fuel_type' => 'Diesel (AGO)', 'attendant' => 'Mary Johnson', 'liters' => 1800, 'amount' => 1180000, 'shift' => 'Morning'],
-    ['pump' => 'Pump 3', 'fuel_type' => 'Petrol (PMS)', 'attendant' => 'Daniel James', 'liters' => 2950, 'amount' => 1640000, 'shift' => 'Morning'],
-    ['pump' => 'Pump 4', 'fuel_type' => 'Gas (LPG)', 'attendant' => 'Esther Grace', 'liters' => 1750, 'amount' => 780000, 'shift' => 'Morning'],
-];
-
-$leaveRequests = [
-    ['employee' => 'Aisha Bello', 'type' => 'Annual Leave', 'duration' => '5 Days', 'date_applied' => '2026-07-05', 'status' => 'Pending'],
-    ['employee' => 'Samuel Peters', 'type' => 'Sick Leave', 'duration' => '2 Days', 'date_applied' => '2026-07-06', 'status' => 'Pending'],
-    ['employee' => 'Ngozi Williams', 'type' => 'Emergency Leave', 'duration' => '1 Day', 'date_applied' => '2026-07-06', 'status' => 'Pending'],
-];
-
-$announcements = [
-    ['title' => 'Safety Reminder', 'message' => 'Always verify opening and closing meter readings before submitting fuel sales.', 'date' => '2026-07-07', 'icon' => 'fa-solid fa-shield-halved'],
-    ['title' => 'Staff Meeting', 'message' => 'Monthly operations meeting on Monday at 9:00 AM.', 'date' => '2026-07-08', 'icon' => 'fa-solid fa-users'],
-    ['title' => 'System Update', 'message' => 'Attendance verification has been improved for faster daily check-ins.', 'date' => '2026-07-09', 'icon' => 'fa-solid fa-screwdriver-wrench'],
-];
-
-$notifications = [
-    ['message' => 'New leave request submitted.', 'time' => '10 mins ago', 'unread' => true],
-    ['message' => 'Duty roster updated.', 'time' => '28 mins ago', 'unread' => true],
-    ['message' => 'Fuel sales verified.', 'time' => '1 hour ago', 'unread' => false],
-    ['message' => 'New employee added.', 'time' => '2 hours ago', 'unread' => false],
+$kpiCards = array_values(array_filter(
+    $kpiCards,
+    static fn (array $card): bool => !empty($dashboardSections[$kpiSections[$card['label']] ?? ''])
+));
+$attendanceRecords = $attendanceRecords ?? [];
+$fuelSales = $fuelSales ?? [];
+$leaveRequests = $leaveRequests ?? [];
+$announcements = $announcements ?? [];
+$notifications = $notifications ?? [];
+$chartData = $chartData ?? [
+    'attendance' => ['labels' => [], 'values' => []],
+    'sales' => ['labels' => [], 'values' => [], 'litres' => []],
+    'leave' => ['labels' => [], 'values' => []],
 ];
 
 $quickActions = [
     ['title' => 'Add Employee', 'description' => 'Register a new staff member for station operations.', 'route' => 'admin/add-employee', 'icon' => 'fa-solid fa-user-plus'],
-    ['title' => 'Assign Duty', 'description' => 'Create shift and pump assignments for attendants.', 'route' => 'supervisor/manage-duty-roster', 'icon' => 'fa-solid fa-calendar-check'],
+    ['title' => 'Assign Duty', 'description' => 'Create shift and pump assignments for attendants.', 'route' => 'admin/duty-roster', 'icon' => 'fa-solid fa-calendar-check'],
+    ['title' => 'Verify Fuel Sales', 'description' => 'Review pending attendant sales submissions.', 'route' => 'admin/verify-sales', 'icon' => 'fa-solid fa-receipt'],
     ['title' => 'Approve Leave', 'description' => 'Review and process pending staff leave requests.', 'route' => 'admin/leave-requests', 'icon' => 'fa-solid fa-clipboard-check'],
-    ['title' => 'View Reports', 'description' => 'Open operational reports and performance summaries.', 'route' => 'admin/reports', 'icon' => 'fa-solid fa-chart-bar'],
-    ['title' => 'Manage Pumps', 'description' => 'Review pump activity, allocation, and fuel lanes.', 'route' => 'admin/pumps', 'icon' => 'fa-solid fa-gas-pump'],
-    ['title' => 'Employee List', 'description' => 'View employee records and staff directory details.', 'route' => 'admin/employees', 'icon' => 'fa-solid fa-users'],
+    ['title' => 'Record Fuel Delivery', 'description' => 'Update station fuel inventory deliveries.', 'route' => 'admin/fuel-inventory', 'icon' => 'fa-solid fa-truck-droplet'],
+    ['title' => 'View Reports', 'description' => 'Open fuel sales reports and performance summaries.', 'route' => 'admin/fuel-sales-report', 'icon' => 'fa-solid fa-chart-bar'],
 ];
-
-$chartData = [
-    'attendance' => [
-        'labels' => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-        'values' => [95, 92, 96, 94, 97, 95],
-    ],
-    'sales' => [
-        'labels' => ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
-        'values' => [3850000, 4120000, 4380000, 4590000, 4850000, 5100000, 3970000],
-    ],
-    'leave' => [
-        'labels' => ['Annual Leave', 'Sick Leave', 'Casual Leave', 'Emergency Leave', 'Study Leave'],
-        'values' => [35, 20, 18, 17, 10],
-    ],
-];
-
+$dashboardQuickActionRoutes = is_array($dashboardQuickActionRoutes ?? null) ? $dashboardQuickActionRoutes : array_column($quickActions, 'route');
+$quickActions = array_values(array_filter(
+    $quickActions,
+    static fn (array $action): bool => in_array($action['route'], $dashboardQuickActionRoutes, true)
+));
 $statusClasses = [
     'Present' => 'admin-status--success',
     'Late' => 'admin-status--warning',
@@ -166,8 +141,16 @@ require __DIR__ . '/../includes/header.php';
             <?php endforeach; ?>
         </div>
 
+        <div class="admin-kpi-grid mt-4" aria-label="Operational summaries">
+            <article class="admin-kpi-card admin-kpi-card--warning" <?php echo empty($dashboardSections['attendance']) ? 'hidden' : ''; ?>><span class="admin-kpi-icon"><i class="fa-solid fa-clock"></i></span><div><span>Late Today</span><strong><?php echo e((string) ($attendanceSummary['late'] ?? 0)); ?></strong></div></article>
+            <article class="admin-kpi-card admin-kpi-card--info" <?php echo empty($dashboardSections['attendance']) ? 'hidden' : ''; ?>><span class="admin-kpi-icon"><i class="fa-solid fa-business-time"></i></span><div><span>Overtime Employees</span><strong><?php echo e((string) ($attendanceSummary['overtime'] ?? 0)); ?></strong></div></article>
+            <article class="admin-kpi-card admin-kpi-card--success" <?php echo empty($dashboardSections['leave']) ? 'hidden' : ''; ?>><span class="admin-kpi-icon"><i class="fa-solid fa-check-double"></i></span><div><span>Leave Approved Today</span><strong><?php echo e((string) ($leaveSummary['approved_today'] ?? 0)); ?></strong></div></article>
+            <article class="admin-kpi-card admin-kpi-card--danger" <?php echo empty($dashboardSections['inventory']) ? 'hidden' : ''; ?>><span class="admin-kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></span><div><span>Low Stock Alerts</span><strong><?php echo e((string) ($dashboard['low_stock'] ?? 0)); ?></strong></div></article>
+            <article class="admin-kpi-card admin-kpi-card--primary" <?php echo empty($dashboardSections['duty']) ? 'hidden' : ''; ?>><span class="admin-kpi-icon"><i class="fa-solid fa-sun"></i></span><div><span>Morning Shift Employees</span><strong><?php echo e((string) ($dutySummary['morning'] ?? 0)); ?></strong></div></article>
+            <article class="admin-kpi-card admin-kpi-card--purple" <?php echo empty($dashboardSections['duty']) ? 'hidden' : ''; ?>><span class="admin-kpi-icon"><i class="fa-solid fa-moon"></i></span><div><span>Evening Shift Employees</span><strong><?php echo e((string) ($dutySummary['evening'] ?? 0)); ?></strong></div></article>
+        </div>
         <div class="row g-4 mt-1">
-            <div class="col-12 col-xl-4">
+            <div class="col-12 col-xl-4" <?php echo empty($dashboardSections['attendance']) ? 'hidden' : ''; ?>>
                 <article class="app-card card admin-chart-card">
                     <div class="app-card__header">
                         <div>
@@ -179,7 +162,7 @@ require __DIR__ . '/../includes/header.php';
                     <canvas id="attendanceChart" height="230" aria-label="Monthly attendance line chart"></canvas>
                 </article>
             </div>
-            <div class="col-12 col-xl-4">
+            <div class="col-12 col-xl-4" <?php echo empty($dashboardSections['sales']) ? 'hidden' : ''; ?>>
                 <article class="app-card card admin-chart-card">
                     <div class="app-card__header">
                         <div>
@@ -191,7 +174,7 @@ require __DIR__ . '/../includes/header.php';
                     <canvas id="salesChart" height="230" aria-label="Fuel sales bar chart"></canvas>
                 </article>
             </div>
-            <div class="col-12 col-xl-4">
+            <div class="col-12 col-xl-4" <?php echo empty($dashboardSections['leave']) ? 'hidden' : ''; ?>>
                 <article class="app-card card admin-chart-card">
                     <div class="app-card__header">
                         <div>
@@ -201,6 +184,12 @@ require __DIR__ . '/../includes/header.php';
                         <span class="admin-section-icon"><i class="fa-solid fa-chart-pie"></i></span>
                     </div>
                     <canvas id="leaveChart" height="230" aria-label="Leave statistics doughnut chart"></canvas>
+                </article>
+            </div>
+            <div class="col-12 col-xl-4" <?php echo empty($dashboardSections['inventory']) ? 'hidden' : ''; ?>>
+                <article class="app-card card admin-chart-card">
+                    <div class="app-card__header"><div><span class="eyebrow">Inventory</span><h2>Fuel Inventory Trend</h2></div><span class="admin-section-icon"><i class="fa-solid fa-chart-area"></i></span></div>
+                    <canvas id="inventoryChart" height="230" aria-label="Fuel inventory trend line chart"></canvas>
                 </article>
             </div>
         </div>
@@ -230,7 +219,7 @@ require __DIR__ . '/../includes/header.php';
 
         <div class="row g-4 mt-1 align-items-start">
             <div class="col-12 col-xl-8">
-                <article class="app-card card admin-table-card">
+                <article class="app-card card admin-table-card" <?php echo empty($dashboardSections['attendance']) ? 'hidden' : ''; ?>>
                     <div class="app-card__header">
                         <div>
                             <span class="eyebrow">Today</span>
@@ -244,26 +233,28 @@ require __DIR__ . '/../includes/header.php';
                                     <th>Employee</th>
                                     <th>Role</th>
                                     <th>Clock In</th>
+                                    <th>Clock Out</th>
                                     <th>Shift</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($attendanceRecords as $record): ?>
+                                <?php if ($attendanceRecords === []): ?><tr><td colspan="6" class="text-center text-muted py-4">No attendance records found.</td></tr><?php else: ?><?php foreach ($attendanceRecords as $record): ?>
                                     <tr>
                                         <td><strong><?php echo e($record['employee']); ?></strong></td>
                                         <td><?php echo e($record['role']); ?></td>
-                                        <td><?php echo e($record['clock_in']); ?></td>
+                                        <td><?php echo e(!empty($record['clock_in']) ? date('h:i A', strtotime((string) $record['clock_in'])) : 'Not Clocked In'); ?></td>
+                                        <td><?php echo e(!empty($record['clock_out']) ? date('h:i A', strtotime((string) $record['clock_out'])) : 'Not Clocked Out'); ?></td>
                                         <td><?php echo e($record['shift']); ?></td>
                                         <td><span class="table-badge <?php echo e($statusClasses[$record['status']] ?? 'admin-status--success'); ?>"><?php echo e($record['status']); ?></span></td>
                                     </tr>
-                                <?php endforeach; ?>
+                                <?php endforeach; ?><?php endif; ?>
                             </tbody>
                         </table>
                     </div>
                 </article>
 
-                <article class="app-card card admin-table-card mt-4">
+                <article class="app-card card admin-table-card mt-4" <?php echo empty($dashboardSections['sales']) ? 'hidden' : ''; ?>>
                     <div class="app-card__header">
                         <div>
                             <span class="eyebrow">Sales</span>
@@ -280,19 +271,20 @@ require __DIR__ . '/../includes/header.php';
                                     <th>Liters Sold</th>
                                     <th>Amount</th>
                                     <th>Shift</th>
+                                    <th>Time</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($fuelSales as $sale): ?>
+                                <?php if ($fuelSales === []): ?><tr><td colspan="7" class="text-center text-muted py-4">No verified fuel sales found.</td></tr><?php else: ?><?php foreach ($fuelSales as $sale): ?>
                                     <tr>
                                         <td><strong><?php echo e($sale['pump']); ?></strong></td>
                                         <td><?php echo e($sale['fuel_type']); ?></td>
                                         <td><?php echo e($sale['attendant']); ?></td>
-                                        <td><?php echo e(number_format($sale['liters'])); ?> L</td>
-                                        <td>NGN <?php echo e(number_format($sale['amount'])); ?></td>
-                                        <td><?php echo e($sale['shift']); ?></td>
+                                        <td><?php echo e(number_format((float) $sale['litres'], 2)); ?> L</td>
+                                        <td>NGN <?php echo e(number_format((float) ($sale['amount'] ?? 0), 2)); ?></td>
+                                        <td><?php echo e($sale['shift']); ?></td><td><?php echo e(!empty($sale['submitted_at']) ? date('h:i A', strtotime((string) $sale['submitted_at'])) : 'N/A'); ?></td>
                                     </tr>
-                                <?php endforeach; ?>
+                                <?php endforeach; ?><?php endif; ?>
                             </tbody>
                         </table>
                     </div>
@@ -300,7 +292,7 @@ require __DIR__ . '/../includes/header.php';
             </div>
 
             <div class="col-12 col-xl-4">
-                <article class="app-card card admin-notification-panel">
+                <article class="app-card card admin-notification-panel" <?php echo empty($dashboardSections['notifications']) ? 'hidden' : ''; ?>>
                     <div class="app-card__header">
                         <div>
                             <span class="eyebrow">Alerts</span>
@@ -336,9 +328,9 @@ require __DIR__ . '/../includes/header.php';
                             <article class="admin-announcement-card">
                                 <span><i class="<?php echo e($announcement['icon']); ?>"></i></span>
                                 <div>
-                                    <h3><?php echo e($announcement['title']); ?></h3>
+                                    <h3><a href="<?php echo e(route_url('admin/announcement-details') . '&id=' . urlencode((string) $announcement['id'])); ?>"><?php echo e($announcement['title']); ?></a></h3><span class="table-badge"><?php echo e((string) ($announcement['priority'] ?? 'Normal')); ?></span>
                                     <p><?php echo e($announcement['message']); ?></p>
-                                    <time datetime="<?php echo e($announcement['date']); ?>"><?php echo e(date('d M Y', strtotime($announcement['date']))); ?></time>
+                                    <time datetime="<?php echo e($announcement['date']); ?>"><?php echo e(format_date($announcement['date'])); ?></time>
                                 </div>
                             </article>
                         <?php endforeach; ?>
@@ -347,7 +339,7 @@ require __DIR__ . '/../includes/header.php';
             </div>
         </div>
 
-        <article class="app-card card admin-table-card mt-4">
+        <article class="app-card card admin-table-card mt-4" <?php echo empty($dashboardSections['leave']) ? 'hidden' : ''; ?>>
             <div class="app-card__header">
                 <div>
                     <span class="eyebrow">Approvals</span>
@@ -367,21 +359,18 @@ require __DIR__ . '/../includes/header.php';
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($leaveRequests as $request): ?>
+                        <?php if ($leaveRequests === []): ?><tr><td colspan="6" class="text-center text-muted py-4">No pending leave requests found.</td></tr><?php else: ?><?php foreach ($leaveRequests as $request): ?>
                             <tr>
                                 <td><strong><?php echo e($request['employee']); ?></strong></td>
                                 <td><?php echo e($request['type']); ?></td>
                                 <td><?php echo e($request['duration']); ?></td>
-                                <td><?php echo e(date('d M Y', strtotime($request['date_applied']))); ?></td>
+                                <td><?php echo e(format_date($request['date_applied'])); ?></td>
                                 <td><span class="table-badge admin-status--warning"><?php echo e($request['status']); ?></span></td>
                                 <td>
-                                    <div class="admin-table-actions">
-                                        <button class="btn btn-sm btn-success" type="button" data-leave-action="approve" data-employee="<?php echo e($request['employee']); ?>">Approve</button>
-                                        <button class="btn btn-sm btn-outline-danger" type="button" data-leave-action="reject" data-employee="<?php echo e($request['employee']); ?>">Reject</button>
-                                    </div>
+                                    <div class="admin-table-actions"><a class="btn btn-sm btn-primary" href="<?php echo e(route_url('admin/leave-requests')); ?>">Review Request</a></div>
                                 </td>
                             </tr>
-                        <?php endforeach; ?>
+                        <?php endforeach; ?><?php endif; ?>
                     </tbody>
                 </table>
             </div>
@@ -389,3 +378,6 @@ require __DIR__ . '/../includes/header.php';
     </section>
 </main>
 <?php require __DIR__ . '/../includes/footer.php'; ?>
+
+
+

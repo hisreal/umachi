@@ -48,3 +48,16 @@ if (!function_exists('view_path')) {
         return VIEW_PATH . '/' . ltrim($path, '/');
     }
 }
+if (!function_exists('csrf_token')) {
+    function csrf_token(): string
+    {
+        return (new App\Services\AuthService())->csrfToken();
+    }
+}
+
+if (!function_exists('csrf_field')) {
+    function csrf_field(): string
+    {
+        return '<input type="hidden" name="_csrf_token" value="' . e(csrf_token()) . '">';
+    }
+}

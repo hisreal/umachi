@@ -43,29 +43,32 @@ $systemName = 'Staff & Activity Management System';
                 <p>Sign in to access your account.</p>
             </div>
 
-            <form method="POST" action="<?php echo e(route_url('clock-in')); ?>" class="auth-form needs-validation" autocomplete="off" novalidate>
+            <form method="POST" action="<?php echo e(route_url('auth/login')); ?>" class="auth-form needs-validation" id="loginForm" autocomplete="off" novalidate>
+                <?php echo csrf_field(); ?>
                 <div class="auth-field">
-                    <label class="form-label" for="username">Username</label>
+                    <label class="form-label" for="username">Company Email or Employee ID</label>
                     <div class="auth-input-group">
                         <span class="auth-input-icon" aria-hidden="true"><i class="fa-solid fa-user"></i></span>
-                        <input type="text" autocomplete="off" id="username" class="form-control" placeholder="Enter your username" autocomplete="username" required>
+                        <input type="text" id="username" name="username" class="form-control" placeholder="e.g. UMACHI-0001 or name@company.com" autocomplete="username" value="<?php echo e((string) ($oldUsername ?? '')); ?>" required>
                     </div>
-                    <div class="invalid-feedback">Username is required.</div>
+                    <div class="invalid-feedback">Company email or Employee ID is required.</div>
                 </div>
 
                 <div class="auth-field">
                     <label class="form-label" for="role">Role Selection</label>
                     <div class="auth-input-group">
                         <span class="auth-input-icon" aria-hidden="true"><i class="fa-solid fa-id-badge"></i></span>
-                        <select id="role" class="form-select" required>
+                        <select id="role" name="role" class="form-select" required>
                             <option value="">Select your role</option>
-                            <option value="Admin">Admin</option>
-                            <option value="Manager">Manager</option>
-                            <option value="Supervisor">Supervisor</option>
-                            <option value="Pump Attendant">Pump Attendant</option>
-                            <option value="Cashier">Cashier</option>
-                            <option value="Security">Security</option>
-                            <option value="Accountant">Accountant</option>
+                            <option value="Admin" <?php echo ($oldRole ?? '') === 'Admin' ? 'selected' : ''; ?>>Admin</option>
+                            <option value="Manager" <?php echo ($oldRole ?? '') === 'Manager' ? 'selected' : ''; ?>>Manager</option>
+                            <option value="Supervisor" <?php echo ($oldRole ?? '') === 'Supervisor' ? 'selected' : ''; ?>>Supervisor</option>
+                            <option value="Pump Attendant" <?php echo ($oldRole ?? '') === 'Pump Attendant' ? 'selected' : ''; ?>>Pump Attendant</option>
+                            <option value="Cashier" <?php echo ($oldRole ?? '') === 'Cashier' ? 'selected' : ''; ?>>Cashier</option>
+                            <option value="Security" <?php echo ($oldRole ?? '') === 'Security' ? 'selected' : ''; ?>>Security</option>
+                            <option value="Accountant" <?php echo ($oldRole ?? '') === 'Accountant' ? 'selected' : ''; ?>>Accountant</option>
+                            <option value="Driver" <?php echo ($oldRole ?? '') === 'Driver' ? 'selected' : ''; ?>>Driver</option>
+
                         </select>
                     </div>
                     <div class="invalid-feedback">Please select your role.</div>
@@ -75,7 +78,7 @@ $systemName = 'Staff & Activity Management System';
                     <label class="form-label" for="password">Password</label>
                     <div class="auth-input-group">
                         <span class="auth-input-icon" aria-hidden="true"><i class="fa-solid fa-lock"></i></span>
-                        <input type="password" id="password" class="form-control" placeholder="Enter your password" autocomplete="current-password" required>
+                        <input type="password" id="password" name="password" class="form-control" placeholder="Enter your password" autocomplete="current-password" required>
                         <button type="button" class="auth-password-toggle" id="togglePassword" aria-label="Show password">
                             <i class="fa-solid fa-eye"></i>
                         </button>
@@ -83,7 +86,7 @@ $systemName = 'Staff & Activity Management System';
                     <div class="invalid-feedback">Password is required.</div>
                 </div>
 
-                <button type="submit" class="btn auth-submit">
+                <button type="submit" class="btn auth-submit" id="loginButton">
                     <span class="auth-submit__text">Sign In</span>
                     <span class="auth-submit__loader" aria-hidden="true"></span>
                 </button>
@@ -106,6 +109,12 @@ $systemName = 'Staff & Activity Management System';
 
     <script src="<?php echo e(asset_url('vendor/bootstrap/js/bootstrap.bundle.min.js')); ?>"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <?php if (!empty($authError)): ?>
+        <script>
+            window.authLoginMessage = <?php echo json_encode((string) $authError, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP); ?>;
+        </script>
+    <?php endif; ?>
     <script src="<?php echo e(asset_url('js/login.js')); ?>"></script>
 </body>
 </html>
+

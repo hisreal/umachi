@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     'use strict';
 
     const showAlert = (icon, title, text) => {
@@ -22,9 +22,69 @@
     const pageSummary = document.getElementById('employeePageSummary');
     const prevPage = document.getElementById('prevEmployeePage');
     const nextPage = document.getElementById('nextEmployeePage');
-    const rowsPerPage = 5;
+    const rowsPerPage = Number.POSITIVE_INFINITY;
     let currentPage = 1;
 
+    const tableDataForExport = () => {
+        const table = document.querySelector('.employee-table');
+        if (!table) { return { headers: [], rows: [] }; }
+
+        const headers = Array.from(table.querySelectorAll('thead th'))
+            .map((cell) => cell.textContent.trim())
+            .filter((header) => header !== 'Actions');
+        const rows = filteredEmployees().map((row) => Array.from(row.children)
+            .slice(0, headers.length)
+            .map((cell) => cell.textContent.replace(/\s+/g, ' ').trim()));
+
+        return { headers, rows };
+    };
+
+    const downloadFile = (filename, content, type) => {
+        const blob = new Blob([content], { type });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        URL.revokeObjectURL(link.href);
+        link.remove();
+    };
+
+    const exportEmployees = (type) => {
+        const { headers, rows } = tableDataForExport();
+        if (headers.length === 0) {
+            showAlert('warning', 'Export Unavailable', 'No employee table was found to export.');
+            return;
+        }
+
+        const filename = `employees-${new Date().toISOString().slice(0, 10)}`;
+        const csv = [headers, ...rows]
+            .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+
+        if (type === 'CSV') {
+            downloadFile(`${filename}.csv`, csv, 'text/csv;charset=utf-8');
+            return;
+        }
+
+        if (type === 'Excel') {
+            const htmlRows = [headers, ...rows]
+                .map((row) => `<tr>${row.map((value) => `<td>${value}</td>`).join('')}</tr>`)
+                .join('');
+            downloadFile(`${filename}.xls`, `<table>${htmlRows}</table>`, 'application/vnd.ms-excel');
+            return;
+        }
+
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            showAlert('warning', 'Popup Blocked', 'Please allow popups to print the employee export.');
+            return;
+        }
+        printWindow.document.write(`<title>Employee Export</title><h1>Employee Export</h1><table border="1" cellspacing="0" cellpadding="6"><thead><tr>${headers.map((header) => `<th>${header}</th>`).join('')}</tr></thead><tbody>${rows.map((row) => `<tr>${row.map((value) => `<td>${value}</td>`).join('')}</tr>`).join('')}</tbody></table>`);
+        printWindow.document.close();
+        printWindow.focus();
+        printWindow.print();
+    };
     const filteredEmployees = () => employeeRows.filter((row) => {
         const query = normalize(employeeSearch ? employeeSearch.value : '');
         return (!query || normalize(row.dataset.search).includes(query))
@@ -39,19 +99,12 @@
             return;
         }
         const visible = filteredEmployees();
-        const totalPages = Math.max(1, Math.ceil(visible.length / rowsPerPage));
-        currentPage = Math.min(currentPage, totalPages);
-        const start = (currentPage - 1) * rowsPerPage;
-        const end = start + rowsPerPage;
-        employeeRows.forEach((row) => { row.hidden = true; });
-        visible.slice(start, end).forEach((row) => { row.hidden = false; });
+        employeeRows.forEach((row) => { row.hidden = !visible.includes(row); });
         if (pageSummary) {
-            const first = visible.length === 0 ? 0 : start + 1;
-            const last = Math.min(end, visible.length);
-            pageSummary.textContent = `Showing ${first}-${last} of ${visible.length} employees`;
+            pageSummary.textContent = `Showing all ${visible.length} employees`;
         }
-        if (prevPage) { prevPage.disabled = currentPage <= 1; }
-        if (nextPage) { nextPage.disabled = currentPage >= totalPages; }
+        if (prevPage) { prevPage.disabled = true; }
+        if (nextPage) { nextPage.disabled = true; }
     };
 
     [employeeSearch, ...Object.values(filters)].forEach((field) => {
@@ -65,33 +118,20 @@
     document.addEventListener('click', (event) => {
         const exportButton = event.target.closest('[data-export-type]');
         if (exportButton) {
-            showAlert('info', `Export ${exportButton.dataset.exportType} (Demo Mode)`, 'Employee export will be connected during backend integration.');
-            return;
-        }
-
-        const actionButton = event.target.closest('[data-employee-action]');
-        if (actionButton) {
-            const employee = actionButton.dataset.employee || 'this employee';
-            const action = actionButton.dataset.employeeAction;
-            const title = action === 'reset' ? 'Reset Password (Demo Mode)' : 'Update Account Status (Demo Mode)';
-            const text = action === 'reset'
-                ? `${employee}'s password reset workflow will be connected later.`
-                : `${employee}'s activation status will be updated after backend integration.`;
-            showAlert('info', title, text);
-            return;
-        }
-
-        const documentAction = event.target.closest('[data-document-action]');
-        if (documentAction) {
-            const action = documentAction.dataset.documentAction;
-            const documentName = documentAction.dataset.document;
-            showAlert('info', `${action.charAt(0).toUpperCase() + action.slice(1)} Document (Demo Mode)`, `${documentName} ${action} action will be connected later.`);
+            exportEmployees(exportButton.dataset.exportType || 'CSV');
             return;
         }
 
         const profileAction = event.target.closest('[data-profile-action="print"]');
         if (profileAction) {
-            showAlert('info', 'Print Profile (Demo Mode)', 'A printable employee profile will be generated during backend integration.');
+            window.print();
+        }
+    });
+
+    document.addEventListener('submit', (event) => {
+        const form = event.target.closest('[data-confirm-submit]');
+        if (form && !window.confirm(form.dataset.confirmSubmit || 'Are you sure?')) {
+            event.preventDefault();
         }
     });
 
@@ -126,23 +166,19 @@
     const employeeForm = document.getElementById('employeeForm');
     if (employeeForm) {
         employeeForm.addEventListener('submit', (event) => {
-            event.preventDefault();
             if (password && confirmPassword && password.value !== confirmPassword.value) {
                 confirmPassword.setCustomValidity('Passwords do not match.');
             } else if (confirmPassword) {
                 confirmPassword.setCustomValidity('');
             }
+
             employeeForm.classList.add('was-validated');
+
             if (!employeeForm.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
                 showAlert('warning', 'Review Employee Form', 'Please complete all required fields correctly.');
-                return;
             }
-            // ============================================
-            // DATABASE PLACEHOLDER
-            // Save employee information.
-            // ============================================
-            const isEdit = document.body.textContent.includes('Update Employee');
-            showAlert('success', isEdit ? 'Employee Updated (Demo Mode)' : 'Employee Saved (Demo Mode)', 'Employee data will be saved to MySQL during backend integration.');
         });
         employeeForm.addEventListener('reset', () => {
             window.setTimeout(() => {
@@ -164,7 +200,7 @@
     document.querySelectorAll('[data-document-upload]').forEach((input) => {
         input.addEventListener('change', () => {
             if (input.files && input.files[0]) {
-                showAlert('success', 'Document Selected (Demo Mode)', `${input.files[0].name} is ready for upload when backend storage is connected.`);
+                showAlert('success', 'Document Selected', `${input.files[0].name} is ready for upload.`);
             }
         });
     });
@@ -185,3 +221,4 @@
 
     renderEmployees();
 }());
+

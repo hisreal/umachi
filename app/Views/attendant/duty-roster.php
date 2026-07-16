@@ -9,99 +9,30 @@ $currentRoute = $currentRoute ?? 'duty-roster';
 $extraStyles = ['css/clock-in.css', 'css/duty-roster.css'];
 $extraScripts = ['js/duty-roster.js'];
 
-// =======================================
-// DATABASE PLACEHOLDER
-// Load employee duty roster from MySQL.
-// =======================================
-$employee = $employee ?? [
-    'employee_id' => 'EMP001',
-    'name' => 'John Doe',
-    'department' => 'Operations',
-    'role' => 'Pump Attendant',
-    'shift' => 'Morning',
-    'current_assignment' => 'Pump 1 - PMS Lane',
-    'passport_photo' => 'images/sample-passport.svg',
-];
-
-// =======================================
-// DATABASE PLACEHOLDER
-// Retrieve today's shift assignment.
-// =======================================
-$todaysDuty = $todaysDuty ?? [
-    'date' => '2026-07-06',
-    'shift' => 'Morning',
-    'assigned_pump' => 'Pump 1',
-    'fuel_type' => 'PMS',
-    'reporting_time' => '6:00 AM',
-    'closing_time' => '2:00 PM',
-    'supervisor' => 'Mr. James',
-    'status' => 'On Duty',
-];
-
-// =======================================
-// DATABASE PLACEHOLDER
-// Replace with duty roster records from the database.
-// =======================================
-$roster = $roster ?? [
-    ['date' => '2026-07-06', 'day' => 'Monday', 'shift' => 'Morning', 'pump' => 'Pump 1', 'reporting_time' => '6:00 AM', 'closing_time' => '2:00 PM', 'supervisor' => 'Mr. James', 'status' => 'Scheduled'],
-    ['date' => '2026-07-07', 'day' => 'Tuesday', 'shift' => 'Evening', 'pump' => 'Pump 3', 'reporting_time' => '2:00 PM', 'closing_time' => '10:00 PM', 'supervisor' => 'Mrs. Grace', 'status' => 'Scheduled'],
-    ['date' => '2026-07-08', 'day' => 'Wednesday', 'shift' => 'Off', 'pump' => '-', 'reporting_time' => '-', 'closing_time' => '-', 'supervisor' => '-', 'status' => 'Off Duty'],
-    ['date' => '2026-07-09', 'day' => 'Thursday', 'shift' => 'Morning', 'pump' => 'Pump 2', 'reporting_time' => '6:00 AM', 'closing_time' => '2:00 PM', 'supervisor' => 'Mr. James', 'status' => 'Upcoming'],
-    ['date' => '2026-07-10', 'day' => 'Friday', 'shift' => 'Evening', 'pump' => 'Pump 4', 'reporting_time' => '2:00 PM', 'closing_time' => '10:00 PM', 'supervisor' => 'Mrs. Grace', 'status' => 'Upcoming'],
-    ['date' => '2026-07-11', 'day' => 'Saturday', 'shift' => 'Morning', 'pump' => 'Pump 1', 'reporting_time' => '6:00 AM', 'closing_time' => '2:00 PM', 'supervisor' => 'Mr. James', 'status' => 'Upcoming'],
-    ['date' => '2026-07-12', 'day' => 'Sunday', 'shift' => 'Off', 'pump' => '-', 'reporting_time' => '-', 'closing_time' => '-', 'supervisor' => '-', 'status' => 'Off Duty'],
-    ['date' => '2026-07-13', 'day' => 'Monday', 'shift' => 'Evening', 'pump' => 'Pump 3', 'reporting_time' => '2:00 PM', 'closing_time' => '10:00 PM', 'supervisor' => 'Mrs. Grace', 'status' => 'Upcoming'],
-];
-
-$shiftStats = $shiftStats ?? [
-    ['label' => 'Total Working Days This Month', 'value' => '22 Days', 'icon' => 'fa-solid fa-calendar-check'],
-    ['label' => 'Morning Shifts', 'value' => '12 Shifts', 'icon' => 'fa-solid fa-sun'],
-    ['label' => 'Evening Shifts', 'value' => '10 Shifts', 'icon' => 'fa-solid fa-moon'],
-    ['label' => 'Days Off', 'value' => '8 Days', 'icon' => 'fa-solid fa-bed'],
-    ['label' => 'Upcoming Shift', 'value' => 'Thu, Jul 9 - Morning', 'icon' => 'fa-solid fa-clock'],
-];
-
-$calendarDays = $calendarDays ?? [
-    ['day' => 1, 'shift' => 'Morning'],
-    ['day' => 2, 'shift' => 'Evening'],
-    ['day' => 3, 'shift' => 'Off'],
-    ['day' => 4, 'shift' => 'Morning'],
-    ['day' => 5, 'shift' => 'Off'],
-    ['day' => 6, 'shift' => 'Morning', 'today' => true],
-    ['day' => 7, 'shift' => 'Evening'],
-    ['day' => 8, 'shift' => 'Off'],
-    ['day' => 9, 'shift' => 'Morning'],
-    ['day' => 10, 'shift' => 'Evening'],
-    ['day' => 11, 'shift' => 'Morning'],
-    ['day' => 12, 'shift' => 'Off'],
-    ['day' => 13, 'shift' => 'Evening'],
-    ['day' => 14, 'shift' => 'Morning'],
-    ['day' => 15, 'shift' => 'Off'],
-    ['day' => 16, 'shift' => 'Morning'],
-    ['day' => 17, 'shift' => 'Evening'],
-    ['day' => 18, 'shift' => 'Morning'],
-    ['day' => 19, 'shift' => 'Off'],
-    ['day' => 20, 'shift' => 'Evening'],
-    ['day' => 21, 'shift' => 'Morning'],
-    ['day' => 22, 'shift' => 'Off'],
-    ['day' => 23, 'shift' => 'Morning'],
-    ['day' => 24, 'shift' => 'Evening'],
-    ['day' => 25, 'shift' => 'Morning'],
-    ['day' => 26, 'shift' => 'Off'],
-    ['day' => 27, 'shift' => 'Evening'],
-    ['day' => 28, 'shift' => 'Morning'],
-    ['day' => 29, 'shift' => 'Off'],
-    ['day' => 30, 'shift' => 'Morning'],
-    ['day' => 31, 'shift' => 'Evening'],
-];
-
-$statusClasses = [
-    'On Duty' => 'roster-status--on-duty',
-    'Off Duty' => 'roster-status--off-duty',
-    'Upcoming' => 'roster-status--upcoming',
-    'Scheduled' => 'roster-status--scheduled',
-];
-
+$employee = $employee ?? ['employee_id' => 'N/A', 'name' => 'Station Staff', 'department' => 'Unassigned', 'role' => 'Pump Attendant', 'shift' => 'No shift assigned', 'current_assignment' => 'No duty assigned for today', 'passport_photo' => 'images/sample-passport.svg'];
+$todaysDuty = $todaysDuty ?? ['date' => date('Y-m-d'), 'shift' => 'No duty assigned for today', 'assigned_pump' => 'N/A', 'fuel_type' => 'N/A', 'reporting_time' => 'N/A', 'closing_time' => 'N/A', 'supervisor' => 'N/A', 'status' => 'No Assignment', 'has_assignment' => false];
+$roster = $roster ?? [];
+$shiftStats = $shiftStats ?? [];
+$calendarAssignments = $calendarAssignments ?? [];
+$calendarLabel = $calendarLabel ?? date('F Y');
+$calendarMonth = $calendarMonth ?? date('m');
+$calendarYear = $calendarYear ?? date('Y');
+$filters = $filters ?? [];
+$pagination = $pagination ?? ['page' => 1, 'pages' => 1, 'total' => 0, 'from' => 0, 'to' => 0];
+$shifts = $shifts ?? [];
+$fuelTypes = $fuelTypes ?? [];
+$statusClasses = ['Active' => 'roster-status--on-duty', 'Completed' => 'roster-status--off-duty', 'Off Duty' => 'roster-status--off-duty', 'Upcoming' => 'roster-status--upcoming', 'Scheduled' => 'roster-status--scheduled', 'No Assignment' => 'roster-status--off-duty'];
+$years = range((int) date('Y'), max(2020, (int) date('Y') - 3));
+$pageUrl = static function (int $page) use ($filters): string {
+    $query = array_filter(array_merge($filters, ['page' => $page]), static fn (mixed $value): bool => $value !== '' && $value !== null);
+    return route_url('duty-roster') . '&' . http_build_query($query);
+};
+$calendarUrl = static function (int $timestamp) use ($filters): string {
+    return route_url('duty-roster') . '&' . http_build_query(array_merge($filters, ['month' => date('m', $timestamp), 'year' => date('Y', $timestamp), 'page' => 1]));
+};
+$calendarTimestamp = strtotime($calendarYear . '-' . $calendarMonth . '-01');
+$daysInMonth = (int) date('t', $calendarTimestamp);
+$leadingBlanks = (int) date('N', $calendarTimestamp) - 1;
 $attendantName = $employee['name'] ?? 'Station Staff';
 $attendantRole = $employee['role'] ?? 'Pump Attendant';
 
@@ -125,7 +56,7 @@ require __DIR__ . '/../includes/header.php';
         </div>
     </section>
 
-    <section class="container-fluid clock-workspace">
+    <section class="container-fluid clock-workspace"><?php if (!empty($dutyError)): ?><div class="alert alert-warning"><?php echo e((string) $dutyError); ?></div><?php endif; ?>
         <div class="row g-4">
             <div class="col-12 col-xl-5">
                 <article class="app-card card roster-employee-card">
@@ -172,7 +103,7 @@ require __DIR__ . '/../includes/header.php';
                     <div class="app-card__header">
                         <div>
                             <span class="eyebrow">Monthly Calendar View</span>
-                            <h2>July 2026</h2>
+                            <h2><a class="btn btn-sm btn-light" href="<?php echo e($calendarUrl(strtotime('-1 month', $calendarTimestamp))); ?>" aria-label="Previous month">&larr;</a> <?php echo e($calendarLabel); ?> <a class="btn btn-sm btn-light" href="<?php echo e($calendarUrl(strtotime('+1 month', $calendarTimestamp))); ?>" aria-label="Next month">&rarr;</a></h2>
                         </div>
                         <div class="roster-calendar-legend">
                             <span><i class="legend-dot legend-morning"></i>Morning</span>
@@ -180,17 +111,17 @@ require __DIR__ . '/../includes/header.php';
                             <span><i class="legend-dot legend-off"></i>Off</span>
                         </div>
                     </div>
-                    <div class="roster-calendar-grid" aria-label="July 2026 duty calendar">
+                    <div class="roster-calendar-grid" aria-label="<?php echo e($calendarLabel); ?> duty calendar">
                         <?php foreach (['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as $weekday): ?>
                             <span class="roster-calendar-weekday"><?php echo e($weekday); ?></span>
                         <?php endforeach; ?>
-                        <?php foreach ($calendarDays as $day): ?>
-                            <?php $shiftKey = strtolower($day['shift']); ?>
-                            <button type="button" class="roster-calendar-day roster-calendar-day--<?php echo e($shiftKey); ?> <?php echo !empty($day['today']) ? 'is-today' : ''; ?>" data-calendar-day="<?php echo e((string) $day['day']); ?>" data-calendar-shift="<?php echo e($day['shift']); ?>">
-                                <strong><?php echo e((string) $day['day']); ?></strong>
-                                <span><?php echo e($day['shift']); ?></span>
+                        <?php for ($blank = 0; $blank < $leadingBlanks; $blank++): ?><span class="roster-calendar-day is-empty" aria-hidden="true"></span><?php endfor; ?>
+                        <?php for ($day = 1; $day <= $daysInMonth; $day++): ?>
+                            <?php $assignments = $calendarAssignments[$day] ?? []; $first = $assignments[0] ?? null; $shiftKey = $first === null ? 'off' : strtolower(str_contains(strtolower($first['shift']), 'even') ? 'evening' : 'morning'); ?>
+                            <button type="button" class="roster-calendar-day roster-calendar-day--<?php echo e($shiftKey); ?> <?php echo date('Y-m-d') === sprintf('%04d-%02d-%02d', $calendarYear, $calendarMonth, $day) ? 'is-today' : ''; ?>" data-calendar-day="<?php echo e((string) $day); ?>" data-calendar-details="<?php echo e($first === null ? 'No duty assigned.' : $first['shift'] . ' | ' . $first['pump'] . ' | ' . $first['fuel_type'] . ' | ' . $first['reporting_time'] . ' - ' . $first['closing_time']); ?>">
+                                <strong><?php echo e((string) $day); ?></strong><span><?php echo e($first['shift'] ?? 'No Duty'); ?></span><?php if (count($assignments) > 1): ?><small>+<?php echo e((string) (count($assignments) - 1)); ?> more</small><?php endif; ?>
                             </button>
-                        <?php endforeach; ?>
+                        <?php endfor; ?>
                     </div>
                 </article>
             </div>
@@ -225,27 +156,15 @@ require __DIR__ . '/../includes/header.php';
                             <span class="eyebrow">Weekly Duty Schedule</span>
                             <h2>Assigned Workdays</h2>
                         </div>
-                        <div class="roster-filters">
+                        <form class="roster-filters" method="get" action="<?php echo e(app_base_url() . '/index.php'); ?>"><input type="hidden" name="route" value="duty-roster">
                             <label class="visually-hidden" for="rosterSearch">Search by date</label>
                             <div class="filter-control">
                                 <i class="fa-solid fa-magnifying-glass"></i>
-                                <input type="search" id="rosterSearch" class="form-control" placeholder="Search date or pump">
+                                <input type="search" id="rosterSearch" name="search" value="<?php echo e((string) ($filters['search'] ?? '')); ?>" class="form-control" placeholder="Search date or pump">
                             </div>
                             <label class="visually-hidden" for="shiftFilter">Filter by shift</label>
-                            <select id="shiftFilter" class="form-select">
-                                <option value="">All Shifts</option>
-                                <option value="Morning">Morning</option>
-                                <option value="Evening">Evening</option>
-                                <option value="Off">Off</option>
-                            </select>
-                            <label class="visually-hidden" for="statusFilter">Filter by status</label>
-                            <select id="statusFilter" class="form-select">
-                                <option value="">All Statuses</option>
-                                <option value="Scheduled">Scheduled</option>
-                                <option value="Upcoming">Upcoming</option>
-                                <option value="Off Duty">Off Duty</option>
-                            </select>
-                        </div>
+                            <select id="shiftFilter" name="shift" class="form-select"><option value="">All Shifts</option><?php foreach ($shifts as $option): ?><option value="<?php echo e($option['value']); ?>" <?php echo ($filters['shift'] ?? '') === $option['value'] ? 'selected' : ''; ?>><?php echo e($option['label']); ?></option><?php endforeach; ?></select>
+                            <select name="fuel" class="form-select"><option value="">All Fuel Types</option><?php foreach ($fuelTypes as $option): ?><option value="<?php echo e($option['value']); ?>" <?php echo ($filters['fuel'] ?? '') === $option['value'] ? 'selected' : ''; ?>><?php echo e($option['label']); ?></option><?php endforeach; ?></select><select name="month" class="form-select"><?php foreach (range(1, 12) as $month): $value = str_pad((string) $month, 2, '0', STR_PAD_LEFT); ?><option value="<?php echo e($value); ?>" <?php echo $calendarMonth === $value ? 'selected' : ''; ?>><?php echo e(date('F', mktime(0, 0, 0, $month, 1))); ?></option><?php endforeach; ?></select><select name="year" class="form-select"><?php foreach ($years as $year): ?><option value="<?php echo e((string) $year); ?>" <?php echo (string) $calendarYear === (string) $year ? 'selected' : ''; ?>><?php echo e((string) $year); ?></option><?php endforeach; ?></select><button class="btn btn-primary btn-sm" type="submit">Apply Filters</button><a class="btn btn-outline-brand btn-sm" href="<?php echo e(route_url('duty-roster')); ?>">Reset</a></form>
                     </div>
                     <div class="table-responsive">
                         <table class="table attendance-table roster-table align-middle">
@@ -262,6 +181,7 @@ require __DIR__ . '/../includes/header.php';
                                 </tr>
                             </thead>
                             <tbody id="rosterTableBody">
+                                <?php if ($roster === []): ?><tr><td colspan="9" class="text-center text-muted py-4">No duty assignments available.</td></tr><?php else: ?>
                                 <?php foreach ($roster as $record): ?>
                                     <tr data-roster-row data-shift="<?php echo e($record['shift']); ?>" data-status="<?php echo e($record['status']); ?>" data-date="<?php echo e($record['date']); ?>">
                                         <td><?php echo e($record['date']); ?></td>
@@ -273,17 +193,12 @@ require __DIR__ . '/../includes/header.php';
                                         <td><?php echo e($record['supervisor']); ?></td>
                                         <td><span class="table-badge roster-status <?php echo e($statusClasses[$record['status']] ?? 'roster-status--scheduled'); ?>"><?php echo e($record['status']); ?></span></td>
                                     </tr>
-                                <?php endforeach; ?>
+                                <?php endforeach; ?><?php endif; ?>
                             </tbody>
                         </table>
                     </div>
                     <div class="history-pagination roster-pagination">
-                        <span id="rosterCount">Showing roster records</span>
-                        <div class="btn-group" role="group" aria-label="Roster pagination">
-                            <button type="button" class="btn btn-outline-brand btn-sm" id="rosterPrevPage">Previous</button>
-                            <button type="button" class="btn btn-outline-brand btn-sm" id="rosterNextPage">Next</button>
-                        </div>
-                    </div>
+                        <span id="rosterCount">Showing <?php echo e((string) $pagination['from']); ?>-<?php echo e((string) $pagination['to']); ?> of <?php echo e((string) $pagination['total']); ?> assignments</span><div class="btn-group"><?php if ($pagination['page'] > 1): ?><a class="btn btn-outline-brand btn-sm" href="<?php echo e($pageUrl($pagination['page'] - 1)); ?>">Previous</a><?php endif; ?><?php if ($pagination['page'] < $pagination['pages']): ?><a class="btn btn-outline-brand btn-sm" href="<?php echo e($pageUrl($pagination['page'] + 1)); ?>">Next</a><?php endif; ?></div></div>
                 </article>
             </div>
         </div>

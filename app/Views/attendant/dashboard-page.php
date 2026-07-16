@@ -13,11 +13,10 @@ $tableColumns = $tableColumns ?? [];
 $tableRows = $tableRows ?? [];
 $quickActions = $quickActions ?? [];
 $announcements = $announcements ?? [];
+$showOperationalSummary = (bool) ($showOperationalSummary ?? false);
 $emptyMessage = $emptyMessage ?? 'No records available yet.';
-$employee = $employee ?? [
-    'name' => 'Chinedu Okafor',
-    'role' => 'Pump Attendant',
-];
+$employee = $employee ?? ['name' => 'Station Staff', 'role' => 'Pump Attendant', 'photo' => 'images/sample-passport.svg'];
+$topbarSubtitle = (string) ($employee['role'] ?? 'Staff') . ' Dashboard';
 $attendantName = $employee['name'] ?? 'Station Staff';
 $attendantRole = $employee['role'] ?? 'Pump Attendant';
 
@@ -31,14 +30,13 @@ require __DIR__ . '/../includes/header.php';
                     <h1><?php echo e($pageHeading); ?></h1>
                     <p><?php echo e($pageIntro); ?></p>
                 </div>
-                <span class="employee-avatar" aria-hidden="true">
-                    <i class="<?php echo e($pageIcon); ?>"></i>
-                </span>
+                <img class="employee-avatar" src="<?php echo e(asset_url((string) ($employee['photo'] ?? 'images/sample-passport.svg'))); ?>" alt="Profile photo of <?php echo e((string) ($employee['name'] ?? 'Station Staff')); ?>">
             </div>
         </div>
     </section>
 
     <section class="container-fluid clock-workspace">
+       
         <?php if ($quickActions !== []): ?>
             <div class="dashboard-section dashboard-quick-actions">
                 <div class="row g-4">
@@ -80,7 +78,7 @@ require __DIR__ . '/../includes/header.php';
                                     <p><?php echo e($announcement['message']); ?></p>
                                     <time datetime="<?php echo e($announcement['date']); ?>">
                                         <i class="fa-solid fa-calendar-day"></i>
-                                        <?php echo e(date('d M Y', strtotime($announcement['date']))); ?>
+                                        <?php echo e(format_date($announcement['date'])); ?>
                                     </time>
                                 </div>
                             </article>
@@ -94,3 +92,4 @@ require __DIR__ . '/../includes/header.php';
     </section>
 </main>
 <?php require __DIR__ . '/../includes/footer.php'; ?>
+

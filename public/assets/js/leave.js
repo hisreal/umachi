@@ -1,9 +1,13 @@
-﻿(function () {
+(function () {
     'use strict';
 
     const form = document.getElementById('leaveApplicationForm');
+    const leaveType = document.getElementById('leaveType');
     const startDate = document.getElementById('startDate');
     const endDate = document.getElementById('endDate');
+    const numberOfDays = document.getElementById('numberOfDays');
+    const supportingDocument = document.getElementById('supportingDocument');
+    const supportingDocumentHelp = document.getElementById('supportingDocumentHelp');
     const searchInput = document.getElementById('leaveSearch');
     const typeFilter = document.getElementById('filterLeaveType');
     const statusFilter = document.getElementById('filterStatus');
@@ -12,7 +16,7 @@
     const countLabel = document.getElementById('leaveHistoryCount');
     const prevButton = document.getElementById('leavePrevPage');
     const nextButton = document.getElementById('leaveNextPage');
-    const pageSize = 5;
+    const pageSize = 1000;
     let currentPage = 1;
 
     const showAlert = (icon, title, text) => {
@@ -29,29 +33,71 @@
         window.alert(`${title}\n\n${text}`);
     };
 
+    const calculateDays = () => {
+        if (!startDate || !endDate || !numberOfDays || !startDate.value || !endDate.value) {
+            if (numberOfDays) {
+                numberOfDays.value = '';
+            }
+            return 0;
+        }
+
+        const start = new Date(`${startDate.value}T00:00:00`);
+        const end = new Date(`${endDate.value}T00:00:00`);
+        if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+            numberOfDays.value = '';
+            return 0;
+        }
+
+        const days = Math.floor((end - start) / 86400000) + 1;
+        numberOfDays.value = String(days);
+        return days;
+    };
+
     const datesAreValid = () => {
-        if (!startDate.value || !endDate.value) {
-            endDate.setCustomValidity('');
+        if (!startDate || !endDate) {
             return true;
         }
 
-        const valid = new Date(endDate.value) >= new Date(startDate.value);
+        if (!startDate.value || !endDate.value) {
+            endDate.setCustomValidity('');
+            calculateDays();
+            return true;
+        }
+
+        const valid = new Date(`${endDate.value}T00:00:00`) >= new Date(`${startDate.value}T00:00:00`);
         endDate.setCustomValidity(valid ? '' : 'End date cannot be before start date.');
+        calculateDays();
         return valid;
+    };
+
+    const updateAttachmentRequirement = () => {
+        if (!leaveType || !supportingDocument) {
+            return;
+        }
+
+        const selected = leaveType.options[leaveType.selectedIndex];
+        const required = selected && selected.dataset.requiresAttachment === '1';
+        supportingDocument.required = Boolean(required);
+
+        if (supportingDocumentHelp) {
+            supportingDocumentHelp.textContent = required
+                ? 'A supporting document is required for this leave type. Accepted formats: PDF, JPG, PNG, DOC, DOCX. Maximum size: 5MB.'
+                : 'Accepted formats: PDF, JPG, PNG, DOC, DOCX. Maximum size: 5MB.';
+        }
     };
 
     const normalizedText = (value) => String(value || '').trim().toLowerCase();
 
     const getFilteredRows = () => {
-        const search = normalizedText(searchInput.value);
-        const leaveType = typeFilter.value;
-        const status = statusFilter.value;
-        const year = yearFilter.value;
+        const search = normalizedText(searchInput ? searchInput.value : '');
+        const selectedType = typeFilter ? typeFilter.value : '';
+        const status = statusFilter ? statusFilter.value : '';
+        const year = yearFilter ? yearFilter.value : '';
 
         return rows.filter((row) => {
             const rowText = normalizedText(row.textContent);
             const matchesSearch = !search || rowText.includes(search);
-            const matchesType = !leaveType || row.dataset.leaveType === leaveType;
+            const matchesType = !selectedType || row.dataset.leaveType === selectedType;
             const matchesStatus = !status || row.dataset.status === status;
             const matchesYear = !year || row.dataset.year === year;
 
@@ -92,28 +138,27 @@
 
     if (form) {
         form.addEventListener('submit', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-
             datesAreValid();
+            updateAttachmentRequirement();
             form.classList.add('was-validated');
 
             if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
                 showAlert('warning', 'Check Leave Form', 'Please complete all required leave details before submitting.');
-                return;
             }
-
-            // =======================================
-            // DATABASE PLACEHOLDER
-            // Save leave request to the database.
-            // =======================================
-            showAlert('success', 'Leave request submitted successfully (Demo Mode).', 'No database changes were made.');
         });
 
         form.addEventListener('reset', () => {
             window.setTimeout(() => {
                 form.classList.remove('was-validated');
-                endDate.setCustomValidity('');
+                if (endDate) {
+                    endDate.setCustomValidity('');
+                }
+                if (numberOfDays) {
+                    numberOfDays.value = '';
+                }
+                updateAttachmentRequirement();
             }, 0);
         });
     }
@@ -121,15 +166,14 @@
     [startDate, endDate].forEach((field) => {
         if (field) {
             field.addEventListener('change', datesAreValid);
+            field.addEventListener('input', datesAreValid);
         }
     });
 
-    [searchInput, typeFilter, statusFilter, yearFilter].forEach((field) => {
-        if (field) {
-            field.addEventListener('input', resetFiltersToFirstPage);
-            field.addEventListener('change', resetFiltersToFirstPage);
-        }
-    });
+    if (leaveType) {
+        leaveType.addEventListener('change', updateAttachmentRequirement);
+    }
+
 
     if (prevButton) {
         prevButton.addEventListener('click', () => {
@@ -145,5 +189,6 @@
         });
     }
 
-    renderRows();
+    updateAttachmentRequirement();
+    datesAreValid();
 })();

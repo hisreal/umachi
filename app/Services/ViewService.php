@@ -12,6 +12,11 @@ class ViewService
 
     public function render(string $view, array $data = []): void
     {
+        $helpersPath = rtrim($this->viewPath, '/\\') . '/includes/view-helpers.php';
+        if (is_file($helpersPath)) {
+            require_once $helpersPath;
+        }
+
         extract($data, EXTR_SKIP);
 
         require rtrim($this->viewPath, '/\\') . '/' . ltrim($view, '/');
@@ -22,3 +27,4 @@ class ViewService
         return rtrim($this->viewPath, '/\\') . '/' . ltrim($view, '/');
     }
 }
+

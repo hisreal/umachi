@@ -6,34 +6,30 @@ $roles = ['Admin', 'Manager', 'Supervisor', 'Pump Attendant', 'Cashier', 'Accoun
 $activityTypes = ['Login', 'Logout', 'Fuel Price Update', 'Employee Update', 'Leave Approval', 'Attendance Adjustment', 'Pump Assignment', 'Shift Assignment', 'Profile Update', 'Password Reset', 'System Settings', 'Duty Assignment'];
 $activityStatuses = ['Success', 'Failed', 'Warning', 'Information'];
 
-// ===============================================
-// DATABASE PLACEHOLDER
-// Retrieve current fuel prices from MySQL.
-// ===============================================
-$fuelPrices = [
-    ['fuel' => 'Petrol (PMS)', 'price' => 945.00, 'updated_by' => 'Administrator', 'effective_date' => '2026-07-10', 'effective_time' => '06:00'],
-    ['fuel' => 'Diesel (AGO)', 'price' => 1150.00, 'updated_by' => 'Administrator', 'effective_date' => '2026-07-10', 'effective_time' => '06:00'],
-    ['fuel' => 'Gas (LPG)', 'price' => 980.00, 'updated_by' => 'Administrator', 'effective_date' => '2026-07-10', 'effective_time' => '06:00'],
-];
+try {
+    $settingsModel = new \App\Models\SettingsModel();
+    $fuelPrices = $settingsModel->currentFuelPrices();
+    $priceHistory = $settingsModel->fuelPriceHistory();
+} catch (Throwable) {
+    $fuelPrices = [
+        'pms' => ['fuel' => 'Petrol (PMS)', 'price' => 0.00, 'updated_by' => 'System', 'effective_date' => date('Y-m-d'), 'effective_time' => date('H:i'), 'icon' => 'fa-solid fa-gas-pump', 'tone' => 'primary'],
+        'ago' => ['fuel' => 'Diesel (AGO)', 'price' => 0.00, 'updated_by' => 'System', 'effective_date' => date('Y-m-d'), 'effective_time' => date('H:i'), 'icon' => 'fa-solid fa-oil-can', 'tone' => 'warning'],
+        'lpg' => ['fuel' => 'Gas (LPG)', 'price' => 0.00, 'updated_by' => 'System', 'effective_date' => date('Y-m-d'), 'effective_time' => date('H:i'), 'icon' => 'fa-solid fa-fire-flame-simple', 'tone' => 'info'],
+    ];
+    $priceHistory = [];
+}
 
-$priceCards = [
-    ['label' => 'Petrol (PMS) Price', 'value' => '₦945.00/Litre', 'icon' => 'fa-solid fa-gas-pump', 'tone' => 'primary'],
-    ['label' => 'Diesel (AGO) Price', 'value' => '₦1,150.00/Litre', 'icon' => 'fa-solid fa-oil-can', 'tone' => 'warning'],
-    ['label' => 'Gas (LPG) Price', 'value' => '₦980.00/Litre', 'icon' => 'fa-solid fa-fire-flame-simple', 'tone' => 'info'],
-    ['label' => 'Last Updated', 'value' => '09 Jul 2026', 'icon' => 'fa-solid fa-clock-rotate-left', 'tone' => 'success'],
-];
-
-// ===============================================
-// DATABASE PLACEHOLDER
-// Retrieve fuel price history from MySQL.
-// ===============================================
-$priceHistory = [
-    ['id' => 'FPH-001', 'date' => '2026-07-09 08:30 AM', 'fuel_type' => 'Petrol (PMS)', 'old_price' => 920.00, 'new_price' => 945.00, 'updated_by' => 'Administrator', 'effective_date' => '2026-07-10'],
-    ['id' => 'FPH-002', 'date' => '2026-07-09 08:30 AM', 'fuel_type' => 'Diesel (AGO)', 'old_price' => 1100.00, 'new_price' => 1150.00, 'updated_by' => 'Administrator', 'effective_date' => '2026-07-10'],
-    ['id' => 'FPH-003', 'date' => '2026-07-09 08:30 AM', 'fuel_type' => 'Gas (LPG)', 'old_price' => 960.00, 'new_price' => 980.00, 'updated_by' => 'Administrator', 'effective_date' => '2026-07-10'],
-    ['id' => 'FPH-004', 'date' => '2026-06-28 07:45 AM', 'fuel_type' => 'Petrol (PMS)', 'old_price' => 900.00, 'new_price' => 920.00, 'updated_by' => 'Manager', 'effective_date' => '2026-06-29'],
-];
-
+$priceCards = [];
+foreach ($fuelPrices as $price) {
+    $priceCards[] = [
+        'label' => $price['fuel'] . ' Price',
+        'value' => 'NGN ' . number_format((float) $price['price'], 2) . '/Litre',
+        'icon' => $price['icon'],
+        'tone' => $price['tone'],
+    ];
+}
+$lastUpdated = $priceHistory[0]['date'] ?? 'N/A';
+$priceCards[] = ['label' => 'Last Updated', 'value' => $lastUpdated, 'icon' => 'fa-solid fa-clock-rotate-left', 'tone' => 'success'];
 $activityStats = [
     ['label' => 'Total Activities', 'value' => '2,486', 'icon' => 'fa-solid fa-list-check', 'tone' => 'primary'],
     ['label' => "Today's Activities", 'value' => '86', 'icon' => 'fa-solid fa-calendar-day', 'tone' => 'info'],
@@ -64,3 +60,4 @@ $activityStatusClasses = [
     'Warning' => 'settings-status--warning',
     'Information' => 'settings-status--info',
 ];
+
