@@ -11,44 +11,38 @@
 
     const photoInput = document.getElementById('profilePhotoInput');
     const photoPreview = document.getElementById('profilePhotoPreview');
+    const removePhotoInput = document.getElementById('removePhoto');
 
     document.querySelector('[data-profile-photo-trigger]')?.addEventListener('click', () => photoInput?.click());
 
     photoInput?.addEventListener('change', () => {
+        if (removePhotoInput) removePhotoInput.value = '0';
         const file = photoInput.files?.[0];
         if (!file) return;
-        if (!['image/jpeg', 'image/jpg', 'image/png'].includes(file.type)) {
+        if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(file.type)) {
             photoInput.value = '';
-            alertBox('Invalid Image Type', 'Please select a JPG, JPEG, or PNG image.', 'warning');
+            alertBox('Invalid Image Type', 'Please select a JPG, JPEG, PNG, or WEBP image.', 'warning');
             return;
         }
         photoPreview.src = URL.createObjectURL(file);
     });
-
     document.querySelector('[data-profile-photo-remove]')?.addEventListener('click', () => {
-        photoPreview.src = window.defaultProfilePhoto || photoPreview.src;
         if (photoInput) photoInput.value = '';
-        alertBox('Photo Removed (Demo Mode)', 'The profile photo preview has been reset.');
+        if (removePhotoInput) removePhotoInput.value = '1';
+        if (photoPreview) photoPreview.src = window.defaultProfilePhoto || photoPreview.src;
     });
-
     document.getElementById('adminProfileForm')?.addEventListener('submit', (event) => {
-        event.preventDefault();
         const form = event.currentTarget;
         const phonePattern = /^[+\d][\d\s-]{7,}$/;
         const phone = document.getElementById('phone')?.value || '';
         const emergencyPhone = document.getElementById('emergencyPhone')?.value || '';
 
         if (!form.checkValidity() || !phonePattern.test(phone) || !phonePattern.test(emergencyPhone)) {
+            event.preventDefault();
+            event.stopPropagation();
             form.classList.add('was-validated');
             alertBox('Invalid Profile Details', 'Please complete all required fields with a valid email and phone number.', 'warning');
-            return;
         }
-
-        // ===========================================
-        // DATABASE PLACEHOLDER
-        // Save updated administrator profile to MySQL.
-        // ===========================================
-        alertBox('Profile Saved (Demo Mode)', 'Administrator profile changes were validated on the frontend only.');
     });
 
     document.querySelectorAll('[data-profile-reset]').forEach((button) => {
@@ -56,8 +50,8 @@
             event.preventDefault();
             const form = button.closest('form');
             if (window.Swal) {
-                window.Swal.fire({ title: 'Reset Form?', text: 'Demo form values will be restored.', icon: 'question', showCancelButton: true, confirmButtonColor: '#f68b34' }).then((result) => {
-                    if (result.isConfirmed) form?.reset();
+                window.Swal.fire({ title: 'Reset Form?', text: 'Form values will be restored.', icon: 'question', showCancelButton: true, confirmButtonColor: '#f68b34' }).then((result) => {
+                    if (result.isConfirmed) { form?.reset(); if (removePhotoInput) removePhotoInput.value = '0'; }
                 });
                 return;
             }
@@ -69,7 +63,7 @@
         link.addEventListener('click', (event) => {
             if (!window.Swal) return;
             event.preventDefault();
-            window.Swal.fire({ title: 'Leave This Page?', text: 'Unsaved demo changes will be discarded.', icon: 'question', showCancelButton: true, confirmButtonColor: '#f68b34' }).then((result) => {
+            window.Swal.fire({ title: 'Leave This Page?', text: 'Unsaved changes will be discarded.', icon: 'question', showCancelButton: true, confirmButtonColor: '#f68b34' }).then((result) => {
                 if (result.isConfirmed) window.location.href = link.href;
             });
         });
@@ -117,7 +111,6 @@
     document.getElementById('newPassword')?.addEventListener('input', updateStrength);
 
     document.getElementById('passwordForm')?.addEventListener('submit', (event) => {
-        event.preventDefault();
         const form = event.currentTarget;
         const current = document.getElementById('currentPassword')?.value || '';
         const next = document.getElementById('newPassword')?.value || '';
@@ -125,19 +118,11 @@
         const score = updateStrength();
 
         if (!form.checkValidity() || score < 5 || next !== confirm || current === next) {
+            event.preventDefault();
+            event.stopPropagation();
             form.classList.add('was-validated');
             alertBox('Password Not Updated', 'Check password requirements, confirmation match, and ensure the new password is different.', 'warning');
-            return;
         }
-
-        // ===========================================
-        // DATABASE PLACEHOLDER
-        // Update administrator password in MySQL.
-        // Store password change history.
-        // ===========================================
-        alertBox('Password Updated (Demo Mode)', 'The password passed frontend validation and is ready for backend integration.');
-        form.reset();
-        updateStrength();
     });
 
     document.addEventListener('DOMContentLoaded', updateStrength);

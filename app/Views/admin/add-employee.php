@@ -23,11 +23,20 @@ $formMode = 'add';
 $formEmployee = [
     'id' => 'EMP007', 'first_name' => '', 'last_name' => '', 'gender' => '', 'dob' => '', 'marital_status' => '', 'phone' => '', 'email' => '', 'address' => '', 'emergency_contact_name' => '', 'emergency_contact_phone' => '', 'department' => '', 'role' => '', 'employment_type' => '', 'status' => 'Active', 'date_joined' => date('Y-m-d'), 'supervisor' => '', 'shift' => '', 'salary' => '', 'allowance' => '', 'bank_name' => '', 'account_name' => '', 'account_number' => '', 'photo' => 'images/sample-passport.svg',
 ];
+try {
+    $formEmployee['id'] = $employeeService->model()->nextEmployeeCode();
+} catch (Throwable) {
+    $formEmployee['id'] = 'UMACHI-0001';
+}
+$employeeSuccess = \App\Core\Session::pullFlash('employee_success');
+$employeeError = \App\Core\Session::pullFlash('employee_error');
 require __DIR__ . '/../includes/header.php';
 ?>
 <main class="clock-in-page employee-module-page">
-    <section class="clock-hero employee-hero"><div class="container-fluid"><nav class="employee-breadcrumb" aria-label="Breadcrumb"><a href="<?php echo e(route_url('admin/dashboard')); ?>">Dashboard</a><i class="fa-solid fa-chevron-right"></i><a href="<?php echo e(route_url('admin/employees')); ?>">Employee Management</a><i class="fa-solid fa-chevron-right"></i><span>Add Employee</span></nav><div class="clock-hero__content employee-hero-card"><div><span class="eyebrow">Employee Registration</span><h1>Add Employee</h1><p>Create a new employee record using frontend-only sample form handling.</p></div><span class="employee-hero-icon"><i class="fa-solid fa-user-plus"></i></span></div></div></section>
+    <section class="clock-hero employee-hero"><div class="container-fluid"><nav class="employee-breadcrumb" aria-label="Breadcrumb"><a href="<?php echo e(route_url('admin/dashboard')); ?>">Dashboard</a><i class="fa-solid fa-chevron-right"></i><a href="<?php echo e(route_url('admin/employees')); ?>">Employee Management</a><i class="fa-solid fa-chevron-right"></i><span>Add Employee</span></nav><div class="clock-hero__content employee-hero-card"><div><span class="eyebrow">Employee Registration</span><h1>Add Employee</h1><p>Create the employee's work account; they will complete their personal profile after first sign-in.</p></div><span class="employee-hero-icon"><i class="fa-solid fa-user-plus"></i></span></div></div></section>
     <section class="container-fluid clock-workspace">
+        <?php if (is_string($employeeSuccess) && $employeeSuccess !== ''): ?><div class="alert alert-success"><?php echo e($employeeSuccess); ?></div><?php endif; ?>
+        <?php if (is_string($employeeError) && $employeeError !== ''): ?><div class="alert alert-danger"><?php echo e($employeeError); ?></div><?php endif; ?>
         <?php require __DIR__ . '/employee-form.php'; ?>
     </section>
 </main>

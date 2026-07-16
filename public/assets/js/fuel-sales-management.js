@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     'use strict';
 
     const alertBox = (icon, title, text) => {
@@ -9,6 +9,41 @@
         window.alert(`${title}\n${text}`);
     };
     const normalize = (value) => String(value || '').trim().toLowerCase();
+    const tableRows = () => Array.from(document.querySelectorAll('.fuel-table tbody tr')).filter((row) => !row.hidden);
+    const tableHeaders = () => Array.from(document.querySelectorAll('.fuel-table thead th')).map((cell) => cell.textContent.trim());
+    const tableData = () => tableRows().map((row) => Array.from(row.children).map((cell) => cell.textContent.replace(/\s+/g, ' ').trim()));
+    const downloadFile = (filename, mimeType, content) => {
+        const blob = new Blob([content], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+    };
+    const csvEscape = (value) => `"${String(value).replace(/"/g, '""')}"`;
+    const exportTable = (type) => {
+        const headers = tableHeaders();
+        const data = tableData();
+        if (headers.length === 0 || data.length === 0) {
+            alertBox('warning', 'No Records', 'There are no visible fuel sales records to export.');
+            return;
+        }
+        const normalizedType = normalize(type);
+        if (normalizedType === 'pdf') {
+            window.print();
+            return;
+        }
+        if (normalizedType === 'excel') {
+            const html = `<table><thead><tr>${headers.map((header) => `<th>${header}</th>`).join('')}</tr></thead><tbody>${data.map((row) => `<tr>${row.map((cell) => `<td>${cell}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+            downloadFile(`fuel-sales-${Date.now()}.xls`, 'application/vnd.ms-excel', html);
+            return;
+        }
+        const csv = [headers, ...data].map((row) => row.map(csvEscape).join(',')).join('\n');
+        downloadFile(`fuel-sales-${Date.now()}.csv`, 'text/csv;charset=utf-8', csv);
+    };
 
     const rows = Array.from(document.querySelectorAll('[data-fuel-row]'));
     const fields = {
@@ -59,25 +94,17 @@
     document.addEventListener('click', (event) => {
         const exportButton = event.target.closest('[data-fuel-export]');
         if (exportButton) {
-            alertBox('info', `Export ${exportButton.dataset.fuelExport} (Demo Mode)`, 'Fuel sales export will be connected during backend integration.');
+            exportTable(exportButton.dataset.fuelExport || 'CSV');
             return;
         }
         const actionButton = event.target.closest('[data-fuel-action]');
         if (actionButton) {
             const action = actionButton.dataset.fuelAction;
             const tx = actionButton.dataset.transaction || 'report';
-            alertBox('info', `${action.replace('-', ' ')} (Demo Mode)`, `${tx} action will be connected later.`);
+            alertBox('info', `${action.replace('-', ' ')}`, `${tx} action is available from the verification/details page.`);
             return;
         }
-        const rowVerify = event.target.closest('[data-verify-workflow]');
-        if (rowVerify) {
-            const labels = { verify: 'Sales Verified (Demo Mode)', reject: 'Sales Rejected (Demo Mode)', correction: 'Correction Requested (Demo Mode)' };
-            // ===========================================
-            // DATABASE PLACEHOLDER
-            // Save verification status.
-            // ===========================================
-            alertBox('success', labels[rowVerify.dataset.verifyWorkflow], 'Verification status will be saved to MySQL during backend integration.');
-        }
+
     });
 
     const chartRoot = document.querySelector('[data-fuel-chart-data]');
@@ -101,3 +128,8 @@
         makeChart('fuelPumpPerformanceChart', 'bar', 'pumpPerformance', 'Pump Performance', { indexAxis: 'y' });
     }
 }());
+
+
+
+
+

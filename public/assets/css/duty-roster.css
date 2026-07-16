@@ -1,4 +1,4 @@
-﻿.roster-page .roster-breadcrumb {
+.roster-page .roster-breadcrumb {
     margin: 0 0 0.85rem;
 }
 
@@ -246,13 +246,27 @@
 }
 
 @media (max-width: 575.98px) {
-    .today-duty-grid,
-    .roster-calendar-grid {
+    .today-duty-grid {
         grid-template-columns: 1fr;
     }
 
-    .roster-calendar-weekday {
-        display: none;
+    .roster-calendar-grid {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 0.2rem;
+    }
+
+    .roster-calendar-day {
+        min-height: 3.25rem;
+        min-width: 0;
+        padding: 0.25rem;
+        touch-action: manipulation;
+    }
+
+    .roster-calendar-day small {
+        overflow: hidden;
+        font-size: 0.6rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .roster-pagination,

@@ -33,7 +33,7 @@
         historyRows.forEach((row) => row.classList.add('is-hidden-by-leave-page'));
         visible.slice(start, end).forEach((row) => row.classList.remove('is-hidden-by-leave-page'));
         const summary = document.getElementById('leaveHistorySummary');
-        if (summary) summary.textContent = visible.length ? `Showing ${start + 1}-${Math.min(end, visible.length)} of ${visible.length} sample records` : 'No leave history matches the filters';
+        if (summary) summary.textContent = visible.length ? `Showing ${start + 1}-${Math.min(end, visible.length)} of ${visible.length} records` : 'No leave history matches the filters';
         const prev = document.getElementById('prevLeaveHistoryPage');
         const next = document.getElementById('nextLeaveHistoryPage');
         if (prev) prev.disabled = historyState.page <= 1;
@@ -81,12 +81,44 @@
         document.getElementById(id)?.addEventListener('change', applyRequestFilters);
     });
 
+    const submitLeaveAction = (requestId, action, notes = '') => {
+        const form = document.getElementById('leaveActionForm');
+        if (!form || !requestId || !action || action === 'note') return;
+        document.getElementById('leaveActionRequestId').value = requestId;
+        document.getElementById('leaveActionValue').value = action;
+        document.getElementById('leaveActionNotes').value = notes;
+        form.submit();
+    };
+
     document.querySelectorAll('[data-leave-action]').forEach((button) => {
         button.addEventListener('click', () => {
-            const action = button.dataset.leaveAction || 'process';
+            const action = button.dataset.leaveAction || '';
+            const requestId = button.dataset.leaveId || document.getElementById('leaveDetailsModal')?.dataset.requestId || '';
             const name = button.dataset.leaveName || 'this request';
-            const title = action === 'note' ? 'Approval Notes Saved (Demo Mode)' : `Leave Request ${action.charAt(0).toUpperCase() + action.slice(1)}d`;
-            alertBox(title, `${name} would be ${action}d in demo mode.`, action === 'reject' ? 'warning' : 'success');
+            const notes = document.getElementById('approvalNotes')?.value || '';
+
+            if (action === 'note') {
+                alertBox('Approval Notes', 'Choose Approve, Reject, or Forward to save notes with an approval action.', 'info');
+                return;
+            }
+
+            const title = action.charAt(0).toUpperCase() + action.slice(1);
+            if (window.Swal) {
+                window.Swal.fire({
+                    title: `${title} leave request?`,
+                    text: `This will update ${name}'s leave request.`,
+                    icon: action === 'reject' ? 'warning' : 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#f68b34',
+                }).then((result) => {
+                    if (result.isConfirmed) submitLeaveAction(requestId, action, notes);
+                });
+                return;
+            }
+
+            if (window.confirm(`${title} leave request for ${name}?`)) {
+                submitLeaveAction(requestId, action, notes);
+            }
         });
     });
 
@@ -94,36 +126,43 @@
         button.addEventListener('click', () => {
             const request = (window.leaveRequests || []).find((item) => String(item.id) === String(button.dataset.leaveView));
             if (!request) return;
-            const history = (request.history || []).map((item) => `<li>${item}</li>`).join('');
+            const history = (request.history || []).map((item) => {
+                if (typeof item === 'string') return `<li>${item}</li>`;
+                return `<li><strong>${item.stage || 'Action'}</strong> - ${item.actor || 'System'} (${item.status || ''}) ${item.comment ? `: ${item.comment}` : ''}</li>`;
+            }).join('');
             const content = document.getElementById('leaveDetailsContent');
             if (content) {
                 content.innerHTML = `<div class="leave-details-grid"><div class="leave-detail-item"><small>Employee</small><strong>${request.employee}</strong></div><div class="leave-detail-item"><small>Department</small><strong>${request.department}</strong></div><div class="leave-detail-item"><small>Role</small><strong>${request.role}</strong></div><div class="leave-detail-item"><small>Leave Type</small><strong>${request.type}</strong></div><div class="leave-detail-item"><small>Start Date</small><strong>${request.start}</strong></div><div class="leave-detail-item"><small>End Date</small><strong>${request.end}</strong></div><div class="leave-detail-item"><small>Number of Days</small><strong>${request.days}</strong></div><div class="leave-detail-item"><small>Supporting Documents</small><strong>${request.documents}</strong></div></div><div class="leave-detail-item mt-3"><small>Reason</small><strong>${request.reason}</strong></div><div class="leave-detail-item mt-3"><small>Approval History</small><ul class="mb-0">${history}</ul></div>`;
             }
-            const modal = window.bootstrap ? new window.bootstrap.Modal(document.getElementById('leaveDetailsModal')) : null;
+            const modalElement = document.getElementById('leaveDetailsModal');
+            if (modalElement) modalElement.dataset.requestId = String(request.id);
+            const noteButton = document.querySelector('[data-leave-action="note"]');
+            if (noteButton) noteButton.dataset.leaveId = String(request.id);
+            const modal = window.bootstrap ? new window.bootstrap.Modal(modalElement) : null;
             if (modal) modal.show();
         });
     });
 
     document.getElementById('leaveTypeForm')?.addEventListener('submit', (event) => {
-        event.preventDefault();
         const form = event.currentTarget;
         if (!form.checkValidity()) {
+            event.preventDefault();
             form.classList.add('was-validated');
             alertBox('Missing Leave Type Details', 'Please complete all required leave type fields.', 'warning');
-            return;
         }
-        // ===============================================
-        // DATABASE PLACEHOLDER
-        // Save leave type to MySQL.
-        // ===============================================
-        alertBox('Leave Type Saved (Demo Mode)', 'The leave type was validated on the frontend only.');
-        form.reset();
-        form.classList.remove('was-validated');
     });
 
-    document.querySelectorAll('[data-leave-type-edit]').forEach((button) => button.addEventListener('click', () => alertBox('Edit Leave Type (Demo Mode)', `${button.dataset.leaveTypeEdit} is ready for frontend-only editing.`, 'info')));
-    document.querySelectorAll('[data-leave-type-delete]').forEach((button) => button.addEventListener('click', () => alertBox('Delete Leave Type?', `${button.dataset.leaveTypeDelete} would be deleted in demo mode.`, 'warning')));
-    document.querySelectorAll('[data-leave-export]').forEach((button) => button.addEventListener('click', () => alertBox('Export Started (Demo Mode)', `${button.dataset.leaveExport} export would be generated here.`, 'info')));
+    document.querySelectorAll('[data-leave-type-edit]').forEach((button) => button.addEventListener('click', () => alertBox('Edit Leave Type', `${button.dataset.leaveTypeEdit} can be edited in a future enhancement.`, 'info')));
+    document.querySelectorAll('[data-leave-type-delete]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const form = document.getElementById('leaveTypeToggleForm');
+            const input = document.getElementById('leaveTypeToggleId');
+            if (!form || !input) return;
+            input.value = button.dataset.leaveTypeId || '';
+            form.submit();
+        });
+    });
+    document.querySelectorAll('[data-leave-export]').forEach((button) => button.addEventListener('click', () => alertBox('Export Started', `${button.dataset.leaveExport} export will be added when reporting is enabled.`, 'info')));
 
     const renderWorkflow = () => {
         const preview = document.getElementById('leaveWorkflowPreview');
@@ -136,18 +175,12 @@
     document.querySelectorAll('input[name="approvalWorkflow"]').forEach((input) => input.addEventListener('change', renderWorkflow));
 
     document.getElementById('leaveApprovalSettingsForm')?.addEventListener('submit', (event) => {
-        event.preventDefault();
         const form = event.currentTarget;
         if (!form.checkValidity()) {
+            event.preventDefault();
             form.classList.add('was-validated');
             alertBox('Missing Approval Settings', 'Please complete the numeric policy settings.', 'warning');
-            return;
         }
-        // ===============================================
-        // DATABASE PLACEHOLDER
-        // Save approval workflow settings to MySQL.
-        // ===============================================
-        alertBox('Approval Settings Saved (Demo Mode)', 'The selected workflow and policy switches are ready for backend integration.');
     });
 
     const initCharts = () => {

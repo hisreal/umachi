@@ -20,47 +20,64 @@ $attendantRole = $adminUser['role'];
 
 require __DIR__ . '/employee-data.php';
 
-// ============================================
-// DATABASE PLACEHOLDER
-// Upload and retrieve employee documents.
-// ============================================
+try {
+    $documents = (new \App\Models\Employee())->documentsFor((string) $selectedEmployee['id']);
+} catch (Throwable) {
+    $documents = [];
+}
+
+$documentTypes = ['Passport Photograph', 'National ID', "Driver's License", 'Employment Letter', 'Other Documents'];
+$employeeCsrf = (new \App\Services\AuthService())->csrfToken();
+$employeeSuccess = \App\Core\Session::pullFlash('employee_success');
+$employeeError = \App\Core\Session::pullFlash('employee_error');
 $documentStats = [
-    ['label' => 'Total Documents', 'value' => 5, 'icon' => 'fa-solid fa-folder-open', 'tone' => 'primary'],
-    ['label' => 'Uploaded Documents', 'value' => 3, 'icon' => 'fa-solid fa-cloud-arrow-up', 'tone' => 'success'],
-    ['label' => 'Missing Documents', 'value' => 2, 'icon' => 'fa-solid fa-triangle-exclamation', 'tone' => 'danger'],
-    ['label' => 'Expiring Documents', 'value' => 1, 'icon' => 'fa-solid fa-calendar-xmark', 'tone' => 'warning'],
+    ['label' => 'Total Documents', 'value' => count($documents), 'icon' => 'fa-solid fa-folder-open', 'tone' => 'primary'],
+    ['label' => 'Uploaded Documents', 'value' => count($documents), 'icon' => 'fa-solid fa-cloud-arrow-up', 'tone' => 'success'],
+    ['label' => 'Missing Documents', 'value' => max(0, count($documentTypes) - count($documents)), 'icon' => 'fa-solid fa-triangle-exclamation', 'tone' => 'danger'],
+    ['label' => 'Expiring Documents', 'value' => count(array_filter($documents, static fn (array $document): bool => !empty($document['expires_on']) && ($expiresAt = strtotime((string) $document['expires_on'])) !== false && $expiresAt <= strtotime('+30 days'))), 'icon' => 'fa-solid fa-calendar-xmark', 'tone' => 'warning'],
 ];
-$documents = [
-    ['type' => 'Passport Photograph', 'status' => 'Uploaded', 'upload_date' => '2026-07-01', 'icon' => 'fa-solid fa-image'],
-    ['type' => 'National ID', 'status' => 'Uploaded', 'upload_date' => '2026-07-02', 'icon' => 'fa-solid fa-id-card'],
-    ['type' => "Driver's License", 'status' => 'Missing', 'upload_date' => '', 'icon' => 'fa-solid fa-car'],
-    ['type' => 'Employment Letter', 'status' => 'Uploaded', 'upload_date' => '2026-07-03', 'icon' => 'fa-solid fa-file-signature'],
-    ['type' => 'Other Documents', 'status' => 'Missing', 'upload_date' => '', 'icon' => 'fa-solid fa-file-lines'],
-];
+
 require __DIR__ . '/../includes/header.php';
 ?>
 <main class="clock-in-page employee-module-page">
-    <section class="clock-hero employee-hero"><div class="container-fluid"><nav class="employee-breadcrumb" aria-label="Breadcrumb"><a href="<?php echo e(route_url('admin/dashboard')); ?>">Dashboard</a><i class="fa-solid fa-chevron-right"></i><a href="<?php echo e(route_url('admin/employees')); ?>">Employee Management</a><i class="fa-solid fa-chevron-right"></i><span>Documents</span></nav><div class="clock-hero__content employee-hero-card"><div><span class="eyebrow">Document Center</span><h1><?php echo e($selectedEmployee['name']); ?> Documents</h1><p>Manage employee document uploads in frontend-only demo mode.</p></div><a class="btn btn-light" href="<?php echo e(route_url('admin/employee-profile')); ?>&employee=<?php echo e($selectedEmployee['id']); ?>"><i class="fa-solid fa-arrow-left"></i>Back to Profile</a></div></div></section>
+    <section class="clock-hero employee-hero"><div class="container-fluid"><nav class="employee-breadcrumb" aria-label="Breadcrumb"><a href="<?php echo e(route_url('admin/dashboard')); ?>">Dashboard</a><i class="fa-solid fa-chevron-right"></i><a href="<?php echo e(route_url('admin/employees')); ?>">Employee Management</a><i class="fa-solid fa-chevron-right"></i><span>Documents</span></nav><div class="clock-hero__content employee-hero-card"><div><span class="eyebrow">Document Center</span><h1><?php echo e($selectedEmployee['name']); ?> Documents</h1><p>Upload and manage employee documents using secure server-side validation.</p></div><a class="btn btn-light" href="<?php echo e(route_url('admin/employee-profile')); ?>&employee=<?php echo e($selectedEmployee['id']); ?>"><i class="fa-solid fa-arrow-left"></i>Back to Profile</a></div></div></section>
     <section class="container-fluid clock-workspace">
+        <?php if (is_string($employeeSuccess) && $employeeSuccess !== ''): ?><div class="alert alert-success"><?php echo e($employeeSuccess); ?></div><?php endif; ?>
+        <?php if (is_string($employeeError) && $employeeError !== ''): ?><div class="alert alert-danger"><?php echo e($employeeError); ?></div><?php endif; ?>
         <div class="employee-summary-grid"><?php foreach ($documentStats as $stat): ?><article class="employee-summary-card employee-summary-card--<?php echo e($stat['tone']); ?>"><span><i class="<?php echo e($stat['icon']); ?>"></i></span><div><small><?php echo e($stat['label']); ?></small><strong><?php echo e((string) $stat['value']); ?></strong></div></article><?php endforeach; ?></div>
         <article class="app-card card employee-list-card mt-4">
             <div class="employee-toolbar"><div><span class="eyebrow">Document Files</span><h2>Document Management</h2></div></div>
-            <div class="employee-filter-grid employee-filter-grid--documents"><select class="form-select" id="documentTypeFilter"><option value="">All document types</option><?php foreach ($documents as $document): ?><option value="<?php echo e($document['type']); ?>"><?php echo e($document['type']); ?></option><?php endforeach; ?></select><input class="form-control" type="date" id="documentDateFilter" aria-label="Filter by upload date"></div>
+            <form class="employee-filter-grid employee-filter-grid--documents" method="post" action="<?php echo e(route_url('admin/employees/upload-document')); ?>" enctype="multipart/form-data">
+                <input type="hidden" name="_csrf_token" value="<?php echo e($employeeCsrf); ?>">
+                <input type="hidden" name="employee" value="<?php echo e($selectedEmployee['id']); ?>">
+                <select class="form-select" name="document_type" required><option value="">Select document type</option><?php foreach ($documentTypes as $documentType): ?><option value="<?php echo e($documentType); ?>"><?php echo e($documentType); ?></option><?php endforeach; ?></select>
+                <input class="form-control" name="document_title" placeholder="Document title" required>
+                <input class="form-control" name="expires_on" type="date" aria-label="Expiry date">
+                <input class="form-control" name="employee_document" type="file" accept="image/*,.pdf,.doc,.docx" required>
+                <button class="btn btn-primary" type="submit"><i class="fa-solid fa-upload"></i>Upload Document</button>
+            </form>
             <div class="row g-4" id="documentGrid">
+                <?php if ($documents === []): ?>
+                    <div class="col-12"><div class="alert alert-info mb-0">No documents have been uploaded for this employee yet.</div></div>
+                <?php endif; ?>
                 <?php foreach ($documents as $document): ?>
-                    <div class="col-12 col-md-6 col-xl-4" data-document-card data-type="<?php echo e($document['type']); ?>" data-date="<?php echo e($document['upload_date']); ?>">
+                    <div class="col-12 col-md-6 col-xl-4" data-document-card data-type="<?php echo e($document['document_type']); ?>" data-date="<?php echo e((string) $document['created_at']); ?>">
                         <article class="document-card">
-                            <span class="document-card-icon"><i class="<?php echo e($document['icon']); ?>"></i></span>
+                            <span class="document-card-icon"><i class="fa-solid fa-file-lines"></i></span>
                             <div>
-                                <h3><?php echo e($document['type']); ?></h3>
-                                <p><?php echo $document['upload_date'] !== '' ? 'Uploaded on ' . e(date('d M Y', strtotime($document['upload_date']))) : 'No file uploaded yet'; ?></p>
-                                <span class="table-badge <?php echo $document['status'] === 'Uploaded' ? 'employee-status--active' : 'employee-status--inactive'; ?>"><?php echo e($document['status']); ?></span>
+                                <h3><?php echo e($document['document_title']); ?></h3>
+                                <p><?php echo e($document['document_type']); ?> • Uploaded on <?php echo e(format_date($document['created_at'] ?? null)); ?></p>
+                                <span class="table-badge employee-status--active">Uploaded</span>
                             </div>
-                            <input class="form-control" type="file" accept="image/*,.pdf,.doc,.docx" data-document-upload>
                             <div class="document-actions">
-                                <button class="btn btn-sm btn-outline-brand" type="button" data-document-action="preview" data-document="<?php echo e($document['type']); ?>">Preview</button>
-                                <button class="btn btn-sm btn-light" type="button" data-document-action="download" data-document="<?php echo e($document['type']); ?>">Download</button>
-                                <button class="btn btn-sm btn-outline-danger" type="button" data-document-action="delete" data-document="<?php echo e($document['type']); ?>">Delete</button>
+                                <a class="btn btn-sm btn-outline-brand" href="<?php echo e(asset_url($document['file_path'])); ?>" target="_blank" rel="noopener">Preview</a>
+                                <a class="btn btn-sm btn-light" href="<?php echo e(asset_url($document['file_path'])); ?>" download>Download</a>
+                                <form method="post" action="<?php echo e(route_url('admin/employees/delete-document')); ?>" data-confirm-submit="Delete this document?">
+                                    <input type="hidden" name="_csrf_token" value="<?php echo e($employeeCsrf); ?>">
+                                    <input type="hidden" name="employee" value="<?php echo e($selectedEmployee['id']); ?>">
+                                    <input type="hidden" name="document_id" value="<?php echo e((string) $document['id']); ?>">
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Delete</button>
+                                </form>
                             </div>
                         </article>
                     </div>
@@ -70,3 +87,4 @@ require __DIR__ . '/../includes/header.php';
     </section>
 </main>
 <?php require __DIR__ . '/../includes/footer.php'; ?>
+

@@ -20,6 +20,9 @@ $attendantName = $adminUser['name'];
 $attendantRole = $adminUser['role'];
 
 require __DIR__ . '/employee-data.php';
+$employeeCsrf = (new \App\Services\AuthService())->csrfToken();
+$employeeSuccess = \App\Core\Session::pullFlash('employee_success');
+$employeeError = \App\Core\Session::pullFlash('employee_error');
 require __DIR__ . '/../includes/header.php';
 ?>
 <main class="clock-in-page employee-module-page">
@@ -34,7 +37,7 @@ require __DIR__ . '/../includes/header.php';
                 <div>
                     <span class="eyebrow">Admin Module</span>
                     <h1><?php echo e($pageHeading); ?></h1>
-                    <p>Manage employee records, roles, status, and account actions using frontend-only sample data.</p>
+                    <p>Manage employee records, roles, status, and account actions from the database.</p>
                 </div>
                 <a class="btn btn-light employee-hero-action" href="<?php echo e(route_url('admin/add-employee')); ?>">
                     <i class="fa-solid fa-user-plus"></i>
@@ -45,6 +48,9 @@ require __DIR__ . '/../includes/header.php';
     </section>
 
     <section class="container-fluid clock-workspace">
+        <?php if (is_string($employeeSuccess) && $employeeSuccess !== ''): ?><div class="alert alert-success"><?php echo e($employeeSuccess); ?></div><?php endif; ?>
+        <?php if (is_string($employeeError) && $employeeError !== ''): ?><div class="alert alert-danger"><?php echo e($employeeError); ?></div><?php endif; ?>
+
         <div class="employee-summary-grid">
             <?php foreach ($employeeStats as $stat): ?>
                 <article class="employee-summary-card employee-summary-card--<?php echo e($stat['tone']); ?>">
@@ -131,6 +137,7 @@ require __DIR__ . '/../includes/header.php';
                     </thead>
                     <tbody id="employeeTableBody">
                         <?php foreach ($employees as $staff): ?>
+                            <?php $isDeletedEmployee = ($staff['is_deleted'] ?? false) === true; ?>
                             <tr data-employee-row
                                 data-search="<?php echo e(strtolower($staff['name'] . ' ' . $staff['id'] . ' ' . $staff['phone'] . ' ' . $staff['email'])); ?>"
                                 data-department="<?php echo e($staff['department']); ?>"
@@ -145,13 +152,18 @@ require __DIR__ . '/../includes/header.php';
                                 <td><?php echo e($staff['department']); ?></td>
                                 <td><?php echo e($staff['role']); ?></td>
                                 <td><span class="table-badge <?php echo e($statusClasses[$staff['status']] ?? 'employee-status--active'); ?>"><?php echo e($staff['status']); ?></span></td>
-                                <td><?php echo e(date('d M Y', strtotime($staff['date_joined']))); ?></td>
+                                <td><?php echo e(format_date($staff['date_joined'] ?? null)); ?></td>
                                 <td>
                                     <div class="employee-actions">
-                                        <a class="btn btn-sm btn-light" href="<?php echo e(route_url('admin/employee-profile')); ?>&employee=<?php echo e($staff['id']); ?>" title="View Profile"><i class="fa-solid fa-eye"></i></a>
-                                        <a class="btn btn-sm btn-light" href="<?php echo e(route_url('admin/edit-employee')); ?>&employee=<?php echo e($staff['id']); ?>" title="Edit"><i class="fa-solid fa-pen-to-square"></i></a>
-                                        <button class="btn btn-sm btn-light" type="button" data-employee-action="toggle" data-employee="<?php echo e($staff['name']); ?>" title="Activate or deactivate"><i class="fa-solid fa-power-off"></i></button>
-                                        <button class="btn btn-sm btn-light" type="button" data-employee-action="reset" data-employee="<?php echo e($staff['name']); ?>" title="Reset password"><i class="fa-solid fa-key"></i></button>
+                                        <?php if (!$isDeletedEmployee): ?>
+                                            <a class="btn btn-sm btn-light" href="<?php echo e(route_url('admin/employee-profile')); ?>&employee=<?php echo e($staff['id']); ?>" title="View Profile"><i class="fa-solid fa-eye"></i></a>
+                                            <a class="btn btn-sm btn-light" href="<?php echo e(route_url('admin/edit-employee')); ?>&employee=<?php echo e($staff['id']); ?>" title="Edit"><i class="fa-solid fa-pen-to-square"></i></a>
+                                            <form method="post" action="<?php echo e(route_url('admin/employees/toggle-account')); ?>" class="d-inline" data-confirm-submit="Change this employee account status?"><input type="hidden" name="_csrf_token" value="<?php echo e($employeeCsrf); ?>"><input type="hidden" name="employee" value="<?php echo e($staff['id']); ?>"><button class="btn btn-sm btn-light" type="submit" title="Activate or deactivate"><i class="fa-solid fa-power-off"></i></button></form>
+                                            <form method="post" action="<?php echo e(route_url('admin/employees/reset-password')); ?>" class="d-inline" data-confirm-submit="Reset this employee password?"><input type="hidden" name="_csrf_token" value="<?php echo e($employeeCsrf); ?>"><input type="hidden" name="employee" value="<?php echo e($staff['id']); ?>"><button class="btn btn-sm btn-light" type="submit" title="Reset password"><i class="fa-solid fa-key"></i></button></form>
+                                            <form method="post" action="<?php echo e(route_url('admin/employees/delete')); ?>" class="d-inline" data-confirm-submit="Delete this employee record?"><input type="hidden" name="_csrf_token" value="<?php echo e($employeeCsrf); ?>"><input type="hidden" name="employee" value="<?php echo e($staff['id']); ?>"><button class="btn btn-sm btn-light employee-action-danger" type="submit" title="Delete"><i class="fa-solid fa-trash"></i></button></form>
+                                        <?php else: ?>
+                                            <span class="btn btn-sm btn-light disabled" title="Deleted record"><i class="fa-solid fa-lock"></i></span>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>
@@ -161,7 +173,7 @@ require __DIR__ . '/../includes/header.php';
             </div>
 
             <div class="employee-pagination">
-                <span id="employeePageSummary">Showing sample records</span>
+                <span id="employeePageSummary">Showing database records</span>
                 <div>
                     <button class="btn btn-outline-brand btn-sm" type="button" id="prevEmployeePage"><i class="fa-solid fa-chevron-left"></i></button>
                     <button class="btn btn-outline-brand btn-sm" type="button" id="nextEmployeePage"><i class="fa-solid fa-chevron-right"></i></button>
@@ -171,3 +183,4 @@ require __DIR__ . '/../includes/header.php';
     </section>
 </main>
 <?php require __DIR__ . '/../includes/footer.php'; ?>
+

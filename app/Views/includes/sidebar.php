@@ -7,17 +7,26 @@ $sidebarVariant = trim((string) ($sidebarVariant ?? ''));
 $sidebarHomeRoute = trim((string) ($sidebarHomeRoute ?? 'dashboard'), '/');
 $sidebarBrandTitle = $sidebarBrandTitle ?? 'FuelOps';
 $sidebarBrandSubtitle = $sidebarBrandSubtitle ?? 'Staff Panel';
-$navItems = $navItems ?? [
+if (!isset($navItems)) {
+    $roles = \App\Core\Session::get('auth.roles', []);
+    $roles = is_array($roles) ? array_map('strval', $roles) : [];
+    $roles[] = (string) \App\Core\Session::get('auth.role', '');
+    $dutyPolicy = new \App\Services\AttendanceDutyPolicyService();
+    $isPumpAttendant = array_filter($roles, [$dutyPolicy, 'requiresManualDuty']) !== [];
+    $navItems = [
     ['label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'fa-solid fa-gauge-high'],
     ['label' => 'Clock In', 'route' => 'attendance/clock-in', 'icon' => 'fa-solid fa-fingerprint'],
     ['label' => 'Clock Out', 'route' => 'attendance/clock-out', 'icon' => 'fa-solid fa-arrow-right-from-bracket'],
-    ['label' => 'Fuel Sales History', 'route' => 'fuel-sales/history', 'icon' => 'fa-solid fa-gas-pump'],
+    ...($isPumpAttendant ? [['label' => 'Fuel Sales History', 'route' => 'fuel-sales/history', 'icon' => 'fa-solid fa-gas-pump']] : []),
     ['label' => 'Attendance History', 'route' => 'attendance/history', 'icon' => 'fa-solid fa-clock-rotate-left'],
-    ['label' => 'Duty Roster', 'route' => 'duty-roster', 'icon' => 'fa-solid fa-calendar-days'],
+    ...($isPumpAttendant ? [['label' => 'Duty Roster', 'route' => 'duty-roster', 'icon' => 'fa-solid fa-calendar-days']] : []),
     ['label' => 'Leave Requests', 'route' => 'leave-requests', 'icon' => 'fa-solid fa-person-walking-arrow-right'],
     ['label' => 'Profile', 'route' => 'profile', 'icon' => 'fa-solid fa-user-gear'],
-    ['label' => 'Logout', 'route' => 'auth/login', 'icon' => 'fa-solid fa-right-from-bracket'],
-];
+        ['label' => 'Change Password', 'route' => 'profile/change-password', 'icon' => 'fa-solid fa-key'],
+        ['label' => 'Announcements', 'route' => 'announcements', 'icon' => 'fa-solid fa-bullhorn'],
+        ['label' => 'Logout', 'route' => 'auth/logout', 'icon' => 'fa-solid fa-right-from-bracket', 'logout' => true],
+    ];
+}
 $hasGroupedNavItems = array_reduce(
     $navItems,
     static fn (bool $hasChildren, array $item): bool => $hasChildren || !empty($item['children']),
@@ -56,10 +65,16 @@ $hasGroupedNavItems = array_reduce(
                     static fn (string $activeRoute): string => trim($activeRoute, '/'),
                     $item['active_routes'] ?? []
                 );
-                $childRoutes = array_map(
-                    static fn (array $child): string => trim((string) ($child['route'] ?? ''), '/'),
-                    $children
-                );
+                $childRoutes = [];
+                foreach ($children as $child) {
+                    $childRoute = trim((string) ($child['route'] ?? ''), '/');
+                    if ($childRoute !== '') {
+                        $childRoutes[] = $childRoute;
+                    }
+                    foreach (($child['active_routes'] ?? []) as $childActiveRoute) {
+                        $childRoutes[] = trim((string) $childActiveRoute, '/');
+                    }
+                }
                 $isActive = ($route !== '' && $route === $currentRoute)
                     || in_array($currentRoute, $activeRoutes, true)
                     || in_array($currentRoute, $childRoutes, true);
@@ -85,7 +100,12 @@ $hasGroupedNavItems = array_reduce(
                                 <?php
                                 $childRoute = trim((string) ($child['route'] ?? ''), '/');
                                 $childHref = $childRoute === '' || $childRoute === '#' ? '#' : route_url($childRoute);
-                                $isChildActive = $childRoute !== '' && $childRoute === $currentRoute;
+                                $childActiveRoutes = array_map(
+                                    static fn (string $activeRoute): string => trim($activeRoute, '/'),
+                                    $child['active_routes'] ?? []
+                                );
+                                $isChildActive = ($childRoute !== '' && $childRoute === $currentRoute)
+                                    || in_array($currentRoute, $childActiveRoutes, true);
                                 ?>
                                 <li>
                                     <a href="<?php echo e($childHref); ?>" class="<?php echo $isChildActive ? 'active' : ''; ?>">

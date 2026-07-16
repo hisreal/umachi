@@ -41,8 +41,13 @@ class AssetService
             return $path;
         }
 
+        $normalizedPath = ltrim(str_replace('\\', '/', $path), '/');
+        if (str_starts_with($normalizedPath, 'uploads/')) {
+            return self::appBaseUrl() . '/public/' . $normalizedPath;
+        }
+
         $assetBaseUrl = $GLOBALS['assetBaseUrl'] ?? self::baseUrl();
 
-        return rtrim($assetBaseUrl, '/') . '/' . ltrim($path, '/');
+        return rtrim($assetBaseUrl, '/') . '/' . $normalizedPath;
     }
 }

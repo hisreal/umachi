@@ -1,0 +1,1 @@
+<?php $passwordHash = password_hash('$2y$10$nxBENUZlLLT5LqnR3GWDXennd7g3LWBechUESvtQV5Vvia4Iwt5WC', PASSWORD_DEFAULT); ?>

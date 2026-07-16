@@ -12,27 +12,17 @@
     const numericPrice = (value) => Number(String(value).replace(/,/g, '').trim());
 
     document.getElementById('fuelPricingForm')?.addEventListener('submit', (event) => {
-        event.preventDefault();
         const form = event.currentTarget;
         const prices = Array.from(form.querySelectorAll('.settings-price-input'));
         const invalidPrice = prices.find((input) => !Number.isFinite(numericPrice(input.value)) || numericPrice(input.value) <= 0);
 
         if (!form.checkValidity() || invalidPrice) {
+            event.preventDefault();
+            event.stopPropagation();
             form.classList.add('was-validated');
             alertBox('Invalid Fuel Price', 'Please enter numeric fuel prices greater than zero and select an effective date/time.', 'warning');
             invalidPrice?.focus();
-            return;
         }
-
-        // ===============================================
-        // DATABASE PLACEHOLDER
-        // Save updated fuel prices to MySQL.
-        // ===============================================
-        // ===============================================
-        // DATABASE PLACEHOLDER
-        // Log every system activity automatically.
-        // ===============================================
-        alertBox('Fuel Prices Saved (Demo Mode)', 'The new prices passed frontend validation and are ready for future database persistence.');
     });
 
     document.querySelector('[data-settings-reset]')?.addEventListener('click', (event) => {
@@ -128,3 +118,4 @@
         applyActivityFilters();
     });
 }());
+

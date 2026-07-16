@@ -19,7 +19,10 @@ class AuthMiddleware implements MiddlewareInterface
 
     public function handle(Request $request, Response $response, callable $next): void
     {
-        // Authentication checks will be enabled when login persistence is implemented.
+        if (!$this->auth->check()) {
+            $response->redirect(route_url('auth/login'));
+        }
+
         $next($request, $response);
     }
 }

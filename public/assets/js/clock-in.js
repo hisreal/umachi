@@ -19,6 +19,7 @@
     retakePhotoBtn: document.getElementById('retakePhotoBtn'),
     removePhotoBtn: document.getElementById('removePhotoBtn'),
     clockInBtn: document.getElementById('clockInBtn'),
+    clockInForm: document.getElementById('clockInForm'),
     historySearch: document.getElementById('historySearch'),
     historyDate: document.getElementById('historyDate'),
     historyRows: Array.from(document.querySelectorAll('[data-history-row]')),
@@ -148,17 +149,6 @@
     syncClockInButton();
   };
 
-  /**
-   * Simulate final clock-in confirmation without submitting data.
-   */
-  const simulateClockIn = () => {
-    // =====================================
-    // DATABASE PLACEHOLDER
-    // Save attendance and selfie metadata in
-    // a future PHP backend action.
-    // =====================================
-    notify('success', 'Clock In Successful', 'Your shift has been marked as started for this prototype.');
-  };
 
   /**
    * Filter and paginate static attendance rows on the frontend.
@@ -204,7 +194,12 @@
     selectors.retakePhotoBtn.addEventListener('click', openNativeCamera);
     selectors.removePhotoBtn.addEventListener('click', clearPhoto);
     selectors.photoInput.addEventListener('change', handlePhotoSelection);
-    selectors.clockInBtn.addEventListener('click', simulateClockIn);
+    selectors.clockInForm?.addEventListener('submit', (event) => {
+      if (!state.photoCaptured) {
+        event.preventDefault();
+        notify('warning', 'Photo Required', 'Please take a fresh selfie before clocking in.');
+      }
+    });
 
     selectors.historySearch.addEventListener('input', () => {
       state.historyPage = 1;

@@ -53,7 +53,7 @@
 
         const summary = document.getElementById('dutyRosterSummary');
         if (summary) {
-            summary.textContent = visibleRows.length ? `Showing ${start + 1}-${Math.min(end, visibleRows.length)} of ${visibleRows.length} sample records` : 'No sample records match the filters';
+            summary.textContent = visibleRows.length ? `Showing ${start + 1}-${Math.min(end, visibleRows.length)} of ${visibleRows.length} live records` : 'No live records match the filters';
         }
 
         const prev = document.getElementById('prevDutyPage');
@@ -82,25 +82,49 @@
             const action = button.dataset.dutyAction || 'view';
             const name = button.dataset.dutyName || 'this record';
             const title = action === 'delete' ? 'Delete Duty Record?' : `${action.charAt(0).toUpperCase() + action.slice(1)} Duty Record`;
-            const text = action === 'delete' ? `${name} would be removed in demo mode.` : `${name}'s duty record is ready for ${action} in demo mode.`;
+            const text = action === 'delete' ? `${name} would be removed in backend mode.` : `${name}'s duty record is ready for ${action} in backend mode.`;
             showAlert(title, text, action === 'delete' ? 'warning' : 'info');
         });
     });
 
     document.getElementById('shiftConfigForm')?.addEventListener('submit', (event) => {
-        event.preventDefault();
         const form = event.currentTarget;
+        form.classList.add('was-validated');
         if (!form.checkValidity()) {
-            form.classList.add('was-validated');
+            event.preventDefault();
             showAlert('Missing Shift Details', 'Please complete all required shift configuration fields.', 'warning');
             return;
         }
 
-        // ===============================================
-        // DATABASE PLACEHOLDER
-        // Save shift configuration changes to MySQL.
-        // ===============================================
-        showAlert('Shift Settings Saved (Demo Mode)', 'The shift configuration has been validated on the frontend only.');
+        const reporting = form.querySelector('[name="reporting_time"]');
+        const closing = form.querySelector('[name="closing_time"]');
+        if (reporting && closing && reporting.value >= closing.value) {
+            event.preventDefault();
+            showAlert('Invalid Time Range', 'Reporting time must be earlier than closing time.', 'warning');
+        }
+    });
+
+    document.addEventListener('click', async (event) => {
+        const shiftButton = event.target.closest('[data-shift-action]');
+        if (!shiftButton) { return; }
+
+        const action = shiftButton.dataset.shiftAction;
+        const name = shiftButton.dataset.name || 'this shift';
+        if (action === 'view') {
+            event.preventDefault();
+            showAlert(name, `${shiftButton.dataset.code || ''}\n${shiftButton.dataset.time || ''}\n${shiftButton.dataset.status || ''}`, 'info');
+            return;
+        }
+
+        if (action === 'delete' || action === 'toggle') {
+            event.preventDefault();
+            const confirmed = window.Swal
+                ? (await window.Swal.fire({ icon: 'warning', title: action === 'delete' ? 'Delete Shift' : 'Update Shift Status', text: `${name} will be ${action === 'delete' ? 'soft deleted' : 'updated'}.`, showCancelButton: true, confirmButtonColor: '#ed3237', confirmButtonText: 'Yes, continue' })).isConfirmed
+                : window.confirm(`${name} will be ${action === 'delete' ? 'soft deleted' : 'updated'}.`);
+            if (confirmed) {
+                shiftButton.closest('form')?.submit();
+            }
+        }
     });
 
     const employeeSelect = document.getElementById('allocationEmployee');
@@ -110,52 +134,26 @@
         document.getElementById('allocationRole').value = selected?.dataset.role || '';
     });
 
-    document.getElementById('pumpAllocationForm')?.addEventListener('submit', (event) => {
-        event.preventDefault();
-        const form = event.currentTarget;
-        const employee = document.getElementById('allocationEmployee');
-        const pump = document.getElementById('allocationPump');
-        const date = document.getElementById('allocationDate');
-        const shift = document.getElementById('allocationShift');
-        const reporting = document.getElementById('allocationReporting');
-        const closing = document.getElementById('allocationClosing');
-
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
-            showAlert('Missing Assignment Details', 'Please complete all required allocation fields.', 'warning');
-            return;
-        }
-
-        if (reporting.value >= closing.value) {
-            showAlert('Invalid Time Range', 'Reporting time must be earlier than closing time.', 'warning');
-            return;
-        }
-
-        const allocations = window.existingPumpAllocations || [];
-        const duplicateEmployee = allocations.some((item) => item.employee_id === employee.value && item.date === date.value && item.shift === shift.value);
-        const duplicatePump = allocations.some((item) => item.pump === pump.value && item.date === date.value && item.shift === shift.value);
-
-        if (duplicateEmployee) {
-            showAlert('Duplicate Employee Assignment', 'This employee is already assigned during the selected date and shift.', 'warning');
-            return;
-        }
-
-        if (duplicatePump) {
-            showAlert('Duplicate Pump Assignment', 'This pump is already assigned during the selected date and shift.', 'warning');
-            return;
-        }
-
-        // ===============================================
-        // DATABASE PLACEHOLDER
-        // Save shift assignments and pump allocations to MySQL.
-        // ===============================================
-        showAlert('Pump Allocation Saved (Demo Mode)', 'The assignment passed frontend validation and is ready for future database integration.');
-        form.reset();
-        document.getElementById('allocationDepartment').value = '';
-        document.getElementById('allocationRole').value = '';
-        form.classList.remove('was-validated');
+    const pumpSelect = document.getElementById('allocationPump');
+    pumpSelect?.addEventListener('change', () => {
+        document.getElementById('allocationFuel').value = pumpSelect.selectedOptions[0]?.dataset.fuel || '';
     });
 
+    const shiftSelect = document.getElementById('allocationShift');
+    shiftSelect?.addEventListener('change', () => {
+        const selected = shiftSelect.selectedOptions[0];
+        document.getElementById('allocationReporting').value = selected?.dataset.reporting || '';
+        document.getElementById('allocationClosing').value = selected?.dataset.closing || '';
+    });
+
+    document.getElementById('pumpAllocationForm')?.addEventListener('submit', (event) => {
+        const form = event.currentTarget;
+        form.classList.add('was-validated');
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            showAlert('Missing Assignment Details', 'Please complete all required allocation fields.', 'warning');
+        }
+    });
     const initDutyCalendar = () => {
         const calendarEl = document.getElementById('dutyCalendar');
         if (!calendarEl || !window.FullCalendar) {
@@ -165,7 +163,7 @@
         const baseEvents = window.dutyRosterEvents || [];
         const calendar = new window.FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            initialDate: '2026-07-08',
+            initialDate: new Date().toISOString().slice(0, 10),
             height: 'auto',
             events: baseEvents,
             eventClick(info) {

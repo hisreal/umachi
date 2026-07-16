@@ -9,71 +9,42 @@ $currentRoute = $currentRoute ?? 'profile';
 $extraStyles = ['css/clock-in.css', 'css/profile.css'];
 $extraScripts = ['js/profile.js'];
 
-// ========================================
-// DATABASE PLACEHOLDER
-// Replace sample employee information
-// with values retrieved from MySQL.
-// ========================================
-$employee = $employee ?? [
-    'employee_id' => 'EMP001',
-    'name' => 'John Doe',
-    'gender' => 'Male',
-    'dob' => '15 March 1998',
-    'phone' => '+234 801 234 5678',
-    'email' => 'john.doe@example.com',
-    'address' => '12 Unity Street, Lagos',
-    'emergency_contact' => '+234 809 876 5432',
-    'department' => 'Operations',
-    'role' => 'Pump Attendant',
-    'date_joined' => '10 January 2024',
-    'salary' => 'â‚¦180,000 / Month',
-    'employment_status' => 'Active',
-    'passport_photo' => 'images/sample-passport.svg',
-];
+$employee = $employee ?? [];
+$profileSuccess = $profileSuccess ?? null;
+$profileError = $profileError ?? null;
 
-// ========================================
-// DATABASE PLACEHOLDER
-// Replace sample profile summary values
-// with attendance, roster, and pump data from MySQL.
-// ========================================
-$profileSummary = $profileSummary ?? [
-    ['label' => 'Employee Id', 'value' => $employee['employee_id'], 'icon' => 'fa-solid fa-id-badge'],
-    ['label' => 'Department', 'value' => $employee['department'], 'icon' => 'fa-solid fa-building'],
-    ['label' => 'Role', 'value' => $employee['role'], 'icon' => 'fa-solid fa-user-gear'],
-    ['label' => 'Years of Service', 'value' => '2 Years', 'icon' => 'fa-solid fa-award'],
-    ['label' => 'Current Shift', 'value' => 'Morning Shift', 'icon' => 'fa-solid fa-business-time'],
-    ['label' => 'Assigned Pump', 'value' => 'Pump 03 - PMS Lane', 'icon' => 'fa-solid fa-gas-pump'],
-    ['label' => 'Attendance Rate', 'value' => '96%', 'icon' => 'fa-solid fa-chart-line'],
-    ['label' => 'Last Clock In', 'value' => '06:03 AM', 'icon' => 'fa-solid fa-right-to-bracket'],
-    ['label' => 'Last Clock Out', 'value' => '02:06 PM', 'icon' => 'fa-solid fa-arrow-right-from-bracket'],
-];
+$profileSummary = $profileSummary ?? [];
 
 $personalInfo = [
-    ['label' => 'Full Name', 'value' => $employee['name'], 'icon' => 'fa-solid fa-user'],
-    ['label' => 'Gender', 'value' => $employee['gender'], 'icon' => 'fa-solid fa-venus-mars'],
-    ['label' => 'Date of Birth', 'value' => $employee['dob'], 'icon' => 'fa-solid fa-cake-candles'],
-    ['label' => 'Phone Number', 'value' => $employee['phone'], 'icon' => 'fa-solid fa-phone'],
-    ['label' => 'Email Address', 'value' => $employee['email'], 'icon' => 'fa-solid fa-envelope'],
-    ['label' => 'Residential Address', 'value' => $employee['address'], 'icon' => 'fa-solid fa-location-dot'],
-    ['label' => 'Emergency Contact', 'value' => $employee['emergency_contact'], 'icon' => 'fa-solid fa-kit-medical'],
+    ['label' => 'Full Name', 'value' => ($employee['name'] ?? 'N/A'), 'icon' => 'fa-solid fa-user'],
+    ['label' => 'Gender', 'value' => ($employee['gender'] ?? 'N/A'), 'icon' => 'fa-solid fa-venus-mars'],
+    ['label' => 'Date of Birth', 'value' => ($employee['dob'] ?? 'N/A'), 'icon' => 'fa-solid fa-cake-candles'],
+    ['label' => 'Phone Number', 'value' => ($employee['phone'] ?? 'N/A'), 'icon' => 'fa-solid fa-phone'],
+    ['label' => 'Email Address', 'value' => ($employee['email'] ?? 'N/A'), 'icon' => 'fa-solid fa-envelope'],
+    ['label' => 'Residential Address', 'value' => ($employee['address'] ?? 'N/A'), 'icon' => 'fa-solid fa-location-dot'],
+    ['label' => 'Emergency Contact', 'value' => ($employee['emergency_contact'] ?? 'N/A'), 'icon' => 'fa-solid fa-kit-medical'],
 ];
 
 $employmentInfo = [
-    ['label' => 'Employee ID', 'value' => $employee['employee_id'], 'icon' => 'fa-solid fa-id-badge'],
-    ['label' => 'Department', 'value' => $employee['department'], 'icon' => 'fa-solid fa-building'],
-    ['label' => 'Role', 'value' => $employee['role'], 'icon' => 'fa-solid fa-user-gear'],
-    ['label' => 'Date Joined', 'value' => $employee['date_joined'], 'icon' => 'fa-solid fa-calendar-check'],
-    ['label' => 'Salary', 'value' => $employee['salary'], 'icon' => 'fa-solid fa-naira-sign'],
-    ['label' => 'Employment Status', 'value' => $employee['employment_status'], 'icon' => 'fa-solid fa-circle-check'],
+    ['label' => 'Employee ID', 'value' => ($employee['employee_id'] ?? 'N/A'), 'icon' => 'fa-solid fa-id-badge'],
+    ['label' => 'Department', 'value' => ($employee['department'] ?? 'N/A'), 'icon' => 'fa-solid fa-building'],
+    ['label' => 'Role', 'value' => ($employee['role'] ?? 'N/A'), 'icon' => 'fa-solid fa-user-gear'],
+    ['label' => 'Date Joined', 'value' => ($employee['date_joined'] ?? 'N/A'), 'icon' => 'fa-solid fa-calendar-check'],
+    ['label' => 'Salary', 'value' => $employee['salary'] ?? 'N/A', 'icon' => 'fa-solid fa-naira-sign'],
+    ['label' => 'Username', 'value' => $employee['username'] ?? 'N/A', 'icon' => 'fa-solid fa-user-lock'],
+    ['label' => 'Last Login', 'value' => $employee['last_login'] ?? 'N/A', 'icon' => 'fa-solid fa-clock-rotate-left'],
+    ['label' => 'Employment Status', 'value' => ($employee['employment_status'] ?? 'N/A'), 'icon' => 'fa-solid fa-circle-check'],
 ];
 
-$statusKey = strtolower(str_replace(' ', '-', $employee['employment_status']));
-$attendantName = $employee['name'] ?? 'Station Staff';
-$attendantRole = $employee['role'] ?? 'Pump Attendant';
+$statusKey = strtolower(str_replace(' ', '-', (string) ($employee['employment_status'] ?? 'N/A')));
+$attendantName = ($employee['name'] ?? 'N/A') ?? 'Station Staff';
+$attendantRole = ($employee['role'] ?? 'N/A') ?? 'Pump Attendant';
 
 require __DIR__ . '/../includes/header.php';
 ?>
 <main class="clock-in-page profile-page">
+    <?php if (!empty($profileSuccess)): ?><div class="container-fluid pt-3"><div class="alert alert-success"><?php echo e((string) $profileSuccess); ?></div></div><?php endif; ?>
+    <?php if (!empty($profileError)): ?><div class="container-fluid pt-3"><div class="alert alert-danger"><?php echo e((string) $profileError); ?></div></div><?php endif; ?>
   
 
     <section class="container-fluid clock-workspace">
@@ -90,20 +61,20 @@ require __DIR__ . '/../includes/header.php';
                         </a>
                     </div>
                     <div class="profile-photo-panel">
-                        <img class="profile-passport" src="<?php echo e(asset_url($employee['passport_photo'])); ?>" alt="Passport photo preview for <?php echo e($employee['name']); ?>">
-                        <strong><?php echo e($employee['name']); ?></strong>
-                        <span class="profile-status profile-status--<?php echo e($statusKey); ?>"><?php echo e($employee['employment_status']); ?></span>
+                        <img class="profile-passport" src="<?php echo e(asset_url($employee['passport_photo'] ?? 'images/sample-passport.svg')); ?>" alt="Passport photo preview for <?php echo e(($employee['name'] ?? 'N/A')); ?>">
+                        <strong><?php echo e(($employee['name'] ?? 'N/A')); ?></strong>
+                        <span class="profile-status profile-status--<?php echo e($statusKey); ?>"><?php echo e(($employee['employment_status'] ?? 'N/A')); ?></span>
 
                    
                     </div>
                     <div class="profile-photo-actions">
-                        <button type="button" class="btn btn-outline-brand" data-profile-demo-action="change-photo">
+                        <button type="button" class="btn btn-outline-brand" data-profile-edit-action>
                             <i class="fa-solid fa-image"></i>
-                            Change Photo (Demo)
+                            Change Photo
                         </button>
-                        <button type="button" class="btn btn-light border" data-profile-demo-action="remove-photo">
+                        <button type="button" class="btn btn-light border" data-profile-edit-action>
                             <i class="fa-solid fa-trash-can"></i>
-                            Remove Photo (Demo)
+                            Manage Photo
                         </button>
                     </div>
                 </article>

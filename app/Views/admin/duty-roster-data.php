@@ -2,80 +2,77 @@
 
 declare(strict_types=1);
 
-// ===============================================
-// DATABASE PLACEHOLDER
-// Replace these sample records with MySQL records.
-// The arrays are intentionally structured like future query results.
-// ===============================================
-$departments = ['Operations', 'Finance', 'Security'];
-$roles = ['Manager', 'Supervisor', 'Pump Attendant', 'Cashier', 'Accountant', 'Security'];
-$fuelTypes = ['Petrol (PMS)', 'Diesel (AGO)', 'Gas (LPG)'];
-$pumps = ['Pump 1', 'Pump 2', 'Pump 3', 'Pump 4'];
-$shiftNames = ['Morning Shift', 'Evening Shift'];
+use App\Core\Request;
+use App\Core\Session;
+use App\Models\DutyManagement;
+use App\Models\Shift;
+use App\Services\DutyManagementService;
+use App\Services\ShiftManagementService;
 
-$employees = [
-    ['id' => 'EMP001', 'name' => 'John Doe', 'department' => 'Operations', 'role' => 'Pump Attendant'],
-    ['id' => 'EMP002', 'name' => 'Mary Johnson', 'department' => 'Operations', 'role' => 'Pump Attendant'],
-    ['id' => 'EMP003', 'name' => 'Chinedu Okafor', 'department' => 'Operations', 'role' => 'Supervisor'],
-    ['id' => 'EMP004', 'name' => 'Aisha Bello', 'department' => 'Finance', 'role' => 'Cashier'],
-    ['id' => 'EMP005', 'name' => 'Grace Williams', 'department' => 'Security', 'role' => 'Security'],
-    ['id' => 'EMP006', 'name' => 'Samuel Eze', 'department' => 'Operations', 'role' => 'Pump Attendant'],
+$dutyModel = new DutyManagement();
+$dutyService = new DutyManagementService($dutyModel);
+$dutyRequest = Request::capture();
+$dutyModel->boot();
+
+$dutyFilters = [
+    'search' => (string) $dutyRequest->query('search', ''),
+    'status' => (string) $dutyRequest->query('status', ''),
+    'date' => (string) $dutyRequest->query('date', ''),
+    'start_date' => (string) $dutyRequest->query('start_date', ''),
+    'end_date' => (string) $dutyRequest->query('end_date', ''),
+    'shift_id' => (string) $dutyRequest->query('shift_id', ''),
+    'fuel_type' => (string) $dutyRequest->query('fuel_type', ''),
+    'pump_id' => (string) $dutyRequest->query('pump_id', ''),
+    'department' => (string) $dutyRequest->query('department', ''),
 ];
 
-// ===============================================
-// DATABASE PLACEHOLDER
-// Retrieve duty roster from MySQL.
-// ===============================================
-$rosterAssignments = [
-    ['date' => '2026-07-08', 'employee_id' => 'EMP001', 'employee' => 'John Doe', 'department' => 'Operations', 'role' => 'Pump Attendant', 'shift' => 'Morning Shift', 'pump' => 'Pump 1', 'fuel_type' => 'Petrol (PMS)', 'reporting' => '06:00 AM', 'closing' => '02:00 PM', 'status' => 'Scheduled'],
-    ['date' => '2026-07-08', 'employee_id' => 'EMP002', 'employee' => 'Mary Johnson', 'department' => 'Operations', 'role' => 'Pump Attendant', 'shift' => 'Morning Shift', 'pump' => 'Pump 2', 'fuel_type' => 'Diesel (AGO)', 'reporting' => '06:00 AM', 'closing' => '02:00 PM', 'status' => 'Scheduled'],
-    ['date' => '2026-07-08', 'employee_id' => 'EMP006', 'employee' => 'Samuel Eze', 'department' => 'Operations', 'role' => 'Pump Attendant', 'shift' => 'Evening Shift', 'pump' => 'Pump 3', 'fuel_type' => 'Petrol (PMS)', 'reporting' => '02:00 PM', 'closing' => '10:00 PM', 'status' => 'Scheduled'],
-    ['date' => '2026-07-07', 'employee_id' => 'EMP004', 'employee' => 'Aisha Bello', 'department' => 'Finance', 'role' => 'Cashier', 'shift' => 'Evening Shift', 'pump' => 'Pump 4', 'fuel_type' => 'Gas (LPG)', 'reporting' => '02:00 PM', 'closing' => '10:00 PM', 'status' => 'Completed'],
-    ['date' => '2026-07-08', 'employee_id' => 'EMP005', 'employee' => 'Grace Williams', 'department' => 'Security', 'role' => 'Security', 'shift' => 'Morning Shift', 'pump' => 'Gate Post', 'fuel_type' => 'N/A', 'reporting' => '06:00 AM', 'closing' => '02:00 PM', 'status' => 'Off Duty'],
-    ['date' => '2026-07-09', 'employee_id' => 'EMP003', 'employee' => 'Chinedu Okafor', 'department' => 'Operations', 'role' => 'Supervisor', 'shift' => 'Morning Shift', 'pump' => 'Forecourt', 'fuel_type' => 'All Fuel Types', 'reporting' => '06:00 AM', 'closing' => '02:00 PM', 'status' => 'On Leave'],
-];
+$options = $dutyModel->formOptions();
+$rosters = $dutyModel->rosterList(['search' => $dutyFilters['search'], 'status' => $dutyFilters['status']]);
+$rosterAssignments = $dutyModel->assignments($dutyFilters);
+$pumpAllocations = $rosterAssignments;
+$calendarEvents = $dutyModel->calendarEvents($dutyFilters);
+$dutySummary = $dutyModel->stats();
+$canManageDuties = $dutyService->canManage();
+$dutySuccess = Session::pullFlash('duty_success');
+$dutyError = Session::pullFlash('duty_error');
 
-$shiftConfigurations = [
-    ['name' => 'Morning Shift', 'start' => '06:00', 'end' => '14:00', 'max_employees' => 8, 'status' => 'Active', 'assigned' => 12],
-    ['name' => 'Evening Shift', 'start' => '14:00', 'end' => '22:00', 'max_employees' => 8, 'status' => 'Active', 'assigned' => 10],
-];
-
-$shiftAssignments = [
-    ['employee' => 'John Doe', 'department' => 'Operations', 'shift' => 'Morning Shift', 'reporting' => '06:00 AM', 'closing' => '02:00 PM', 'status' => 'Active'],
-    ['employee' => 'Mary Johnson', 'department' => 'Operations', 'shift' => 'Morning Shift', 'reporting' => '06:00 AM', 'closing' => '02:00 PM', 'status' => 'Active'],
-    ['employee' => 'Samuel Eze', 'department' => 'Operations', 'shift' => 'Evening Shift', 'reporting' => '02:00 PM', 'closing' => '10:00 PM', 'status' => 'Active'],
-    ['employee' => 'Grace Williams', 'department' => 'Security', 'shift' => 'Morning Shift', 'reporting' => '06:00 AM', 'closing' => '02:00 PM', 'status' => 'Off Duty'],
-    ['employee' => 'Chinedu Okafor', 'department' => 'Operations', 'shift' => 'Morning Shift', 'reporting' => '06:00 AM', 'closing' => '02:00 PM', 'status' => 'Leave'],
-];
-
-// ===============================================
-// DATABASE PLACEHOLDER
-// Retrieve pump allocations from MySQL.
-// ===============================================
-$pumpAllocations = [
-    ['date' => '2026-07-08', 'employee_id' => 'EMP001', 'employee' => 'John Doe', 'department' => 'Operations', 'role' => 'Pump Attendant', 'pump' => 'Pump 1', 'fuel_type' => 'Petrol (PMS)', 'shift' => 'Morning Shift', 'reporting' => '06:00 AM', 'closing' => '02:00 PM', 'supervisor' => 'Chinedu Okafor', 'status' => 'Assigned'],
-    ['date' => '2026-07-08', 'employee_id' => 'EMP002', 'employee' => 'Mary Johnson', 'department' => 'Operations', 'role' => 'Pump Attendant', 'pump' => 'Pump 2', 'fuel_type' => 'Diesel (AGO)', 'shift' => 'Morning Shift', 'reporting' => '06:00 AM', 'closing' => '02:00 PM', 'supervisor' => 'Chinedu Okafor', 'status' => 'Assigned'],
-    ['date' => '2026-07-08', 'employee_id' => 'EMP006', 'employee' => 'Samuel Eze', 'department' => 'Operations', 'role' => 'Pump Attendant', 'pump' => 'Pump 3', 'fuel_type' => 'Petrol (PMS)', 'shift' => 'Evening Shift', 'reporting' => '02:00 PM', 'closing' => '10:00 PM', 'supervisor' => 'Chinedu Okafor', 'status' => 'Assigned'],
-    ['date' => '2026-07-07', 'employee_id' => 'EMP004', 'employee' => 'Aisha Bello', 'department' => 'Finance', 'role' => 'Cashier', 'pump' => 'Pump 4', 'fuel_type' => 'Gas (LPG)', 'shift' => 'Evening Shift', 'reporting' => '02:00 PM', 'closing' => '10:00 PM', 'supervisor' => 'Chinedu Okafor', 'status' => 'Completed'],
-];
+$employees = $options['employees'];
+$employeeOptions = $options['employees'];
+$pumpOptions = $options['pumps'];
+$shiftOptions = $options['shifts'];
+$rosterOptions = $options['rosters'];
+$supervisorOptions = $options['supervisors'];
+$departments = $options['departments'];
+$roles = $options['roles'];
+$fuelTypes = array_map(static fn (string $fuelType): string => match ($fuelType) {
+    'Petrol' => 'Petrol (PMS)',
+    'Diesel' => 'Diesel (AGO)',
+    'Gas' => 'Gas (LPG)',
+    default => $fuelType,
+}, $options['fuel_types']);
+$pumps = array_map(static fn (array $pump): string => trim($pump['pump_code'] . ' - ' . $pump['pump_name'], ' -'), $pumpOptions);
+$shiftNames = array_column($shiftOptions, 'name');
 
 $dutyStats = [
-    ['label' => 'Total Employees Assigned Today', 'value' => '24', 'icon' => 'fa-solid fa-user-check', 'tone' => 'primary'],
-    ['label' => 'Morning Shift Employees', 'value' => '12', 'icon' => 'fa-solid fa-sun', 'tone' => 'success'],
-    ['label' => 'Evening Shift Employees', 'value' => '10', 'icon' => 'fa-solid fa-moon', 'tone' => 'info'],
-    ['label' => 'Available Employees', 'value' => '8', 'icon' => 'fa-solid fa-users', 'tone' => 'warning'],
-    ['label' => 'Total Pump Assignments', 'value' => '18', 'icon' => 'fa-solid fa-gas-pump', 'tone' => 'orange'],
-    ['label' => 'Pending Shift Changes', 'value' => '3', 'icon' => 'fa-solid fa-clock', 'tone' => 'danger'],
+    ['label' => 'Total Rosters', 'value' => (string) $dutySummary['total_rosters'], 'icon' => 'fa-solid fa-clipboard-list', 'tone' => 'primary'],
+    ['label' => "Today's Assignments", 'value' => (string) $dutySummary['today_assignments'], 'icon' => 'fa-solid fa-user-check', 'tone' => 'success'],
+    ['label' => 'Morning Assignments', 'value' => (string) $dutySummary['morning_assignments'], 'icon' => 'fa-solid fa-sun', 'tone' => 'warning'],
+    ['label' => 'Evening Assignments', 'value' => (string) $dutySummary['evening_assignments'], 'icon' => 'fa-solid fa-moon', 'tone' => 'info'],
+    ['label' => 'Available Employees', 'value' => (string) $dutySummary['available_employees'], 'icon' => 'fa-solid fa-users', 'tone' => 'orange'],
+    ['label' => 'Published Rosters', 'value' => (string) $dutySummary['published_rosters'], 'icon' => 'fa-solid fa-circle-check', 'tone' => 'success'],
 ];
 
 $shiftStats = [
-    ['label' => 'Morning Shift Employees', 'value' => '12', 'icon' => 'fa-solid fa-sun', 'tone' => 'success'],
-    ['label' => 'Evening Shift Employees', 'value' => '10', 'icon' => 'fa-solid fa-moon', 'tone' => 'info'],
-    ['label' => 'Total Shifts Today', 'value' => '2', 'icon' => 'fa-solid fa-business-time', 'tone' => 'primary'],
-    ['label' => 'Employees Off Duty', 'value' => '4', 'icon' => 'fa-solid fa-bed', 'tone' => 'warning'],
+    ['label' => 'Morning Shift Employees', 'value' => (string) $dutySummary['morning_assignments'], 'icon' => 'fa-solid fa-sun', 'tone' => 'success'],
+    ['label' => 'Evening Shift Employees', 'value' => (string) $dutySummary['evening_assignments'], 'icon' => 'fa-solid fa-moon', 'tone' => 'info'],
+    ['label' => 'Available Pumps', 'value' => (string) $dutySummary['available_pumps'], 'icon' => 'fa-solid fa-gas-pump', 'tone' => 'primary'],
+    ['label' => 'Inactive Pumps', 'value' => (string) $dutySummary['inactive_pumps'], 'icon' => 'fa-solid fa-triangle-exclamation', 'tone' => 'warning'],
 ];
 
 $dutyStatusClasses = [
+    'Draft' => 'duty-status--off',
+    'Published' => 'duty-status--active',
+    'Archived' => 'duty-status--completed',
     'Scheduled' => 'duty-status--scheduled',
     'Completed' => 'duty-status--completed',
     'Off Duty' => 'duty-status--off',
@@ -86,18 +83,41 @@ $dutyStatusClasses = [
     'Cancelled' => 'duty-status--off',
 ];
 
-$calendarEvents = array_map(static function (array $assignment): array {
-    $shiftColor = match ($assignment['status']) {
-        'On Leave', 'Leave' => '#f97316',
-        'Off Duty' => '#64748b',
-        default => $assignment['shift'] === 'Evening Shift' ? '#0ea5e9' : '#16a34a',
-    };
-
-    return [
-        'title' => $assignment['employee'] . ' - ' . $assignment['shift'] . ' - ' . $assignment['pump'],
-        'start' => $assignment['date'],
-        'backgroundColor' => $shiftColor,
-        'borderColor' => $shiftColor,
-        'extendedProps' => $assignment,
+if (($currentRoute ?? '') === 'admin/shift-management' || ($currentRoute ?? '') === 'admin/add-shift' || ($currentRoute ?? '') === 'admin/edit-shift') {
+    $shiftModel = new Shift();
+    $shiftFilters = [
+        'search' => (string) $dutyRequest->query('search', ''),
+        'status' => (string) $dutyRequest->query('status', ''),
+        'reporting_time' => (string) $dutyRequest->query('reporting_time', ''),
+        'closing_time' => (string) $dutyRequest->query('closing_time', ''),
+        'sort' => (string) $dutyRequest->query('sort', 'shift_name'),
+        'direction' => (string) $dutyRequest->query('direction', 'asc'),
+        'page' => (int) $dutyRequest->query('page', 1),
+        'per_page' => 20,
     ];
-}, $rosterAssignments);
+    $shiftResult = $shiftModel->paginated($shiftFilters);
+    $shiftConfigurations = $shiftResult['records'];
+    $shiftPagination = $shiftResult['pagination'];
+    $shiftSuccess = Session::pullFlash('shift_success');
+    $shiftError = Session::pullFlash('shift_error');
+    $canManageShifts = (new ShiftManagementService($shiftModel))->canManage();
+    $shiftStatuses = ['Active', 'Inactive'];
+    $selectedShift = null;
+    $requestedShiftId = (int) $dutyRequest->query('shift', 0);
+    if ($requestedShiftId > 0) {
+        $selectedShift = $shiftModel->findForView($requestedShiftId);
+    }
+    if ($selectedShift === null) {
+        $selectedShift = ['id' => 0, 'shift_code' => '', 'shift_name' => '', 'name' => '', 'reporting_time' => '06:00', 'closing_time' => '14:00', 'maximum_employees' => 10, 'max_employees' => 10, 'grace_period' => 0, 'status' => 'Active', 'description' => ''];
+    }
+    $summary = $shiftModel->summary();
+    $shiftStats = [
+        ['label' => 'Total Shifts', 'value' => (string) $summary['total'], 'icon' => 'fa-solid fa-business-time', 'tone' => 'primary'],
+        ['label' => 'Active Shifts', 'value' => (string) $summary['active'], 'icon' => 'fa-solid fa-circle-check', 'tone' => 'success'],
+        ['label' => 'Inactive Shifts', 'value' => (string) $summary['inactive'], 'icon' => 'fa-solid fa-circle-pause', 'tone' => 'warning'],
+        ['label' => 'Total Employees Assigned', 'value' => (string) $summary['assigned'], 'icon' => 'fa-solid fa-user-check', 'tone' => 'info'],
+        ['label' => 'Morning Shift Employees', 'value' => (string) $summary['morning'], 'icon' => 'fa-solid fa-sun', 'tone' => 'success'],
+        ['label' => 'Evening Shift Employees', 'value' => (string) $summary['evening'], 'icon' => 'fa-solid fa-moon', 'tone' => 'info'],
+    ];
+    $shiftAssignments = array_map(static fn (array $shift): array => ['employee' => 'Assigned Employees', 'department' => 'All Departments', 'shift' => $shift['shift_name'], 'reporting' => $shift['reporting'], 'closing' => $shift['closing'], 'status' => $shift['status']], $shiftConfigurations);
+}

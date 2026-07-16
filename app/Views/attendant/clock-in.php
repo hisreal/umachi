@@ -8,8 +8,6 @@ $topbarSubtitle = 'Pump Attendant Dashboard';
 $currentRoute = $currentRoute ?? 'attendance/clock-in';
 $extraStyles = ['css/clock-in.css'];
 $extraScripts = ['js/clock-in.js'];
-// DATABASE PLACEHOLDER
-// Replace this sample data with values retrieved from the database during backend integration.
 $employee = $employee ?? [
     'name' => 'Chinedu Okafor',
     'employee_id' => 'EMP-FS-0017',
@@ -18,17 +16,15 @@ $employee = $employee ?? [
     'shift' => 'Morning Shift (06:00 AM - 02:00 PM)',
     'assigned_pump' => 'Pump 03 - PMS Lane',
 ];
+$automaticDuty = (bool) ($employee['automatic_duty'] ?? false);
+$topbarSubtitle = (string) ($employee['role'] ?? 'Staff') . ' Dashboard';
 
-// DATABASE PLACEHOLDER
-// Replace this sample status with the employee's current attendance state from the database.
 $attendanceStatus = $attendanceStatus ?? [
     'shift_date' => 'Saturday, July 4, 2026',
     'current_time' => '05:54 AM',
     'photo_status' => 'Waiting for Selfie',
 ];
 
-// DATABASE PLACEHOLDER
-// Replace this sample history with attendance records retrieved from the database.
 $attendanceHistory = $attendanceHistory ?? [
     [
         'date' => '2026-07-04',
@@ -82,6 +78,10 @@ require __DIR__ . '/../includes/header.php';
     </section>
 
     <section class="container-fluid clock-workspace">
+        <?php if (!empty($attendanceSuccess)): ?><div class="alert alert-success"><?php echo e((string) $attendanceSuccess); ?></div><?php endif; ?>
+        <?php if (!empty($attendanceError)): ?><div class="alert alert-danger"><?php echo e((string) $attendanceError); ?></div><?php endif; ?>
+        <form id="clockInForm" method="post" action="<?php echo e(route_url('attendance/clock-in')); ?>" enctype="multipart/form-data">
+            <?php echo csrf_field(); ?>
         <div class="row g-4">
             <div class="col-12 col-xl-5">
                 <article class="employee-card app-card card">
@@ -107,6 +107,16 @@ require __DIR__ . '/../includes/header.php';
                             <span>Role</span>
                             <strong><?php echo e($employee['role'] ?? 'Pump Attendant'); ?></strong>
                         </div>
+                        <?php if ($automaticDuty): ?>
+                        <div>
+                            <span>Current Date</span>
+                            <strong><?php echo e($attendanceStatus['shift_date'] ?? date('l, F j, Y')); ?></strong>
+                        </div>
+                        <div class="employee-grid__wide">
+                            <span>Status</span>
+                            <strong><?php echo e($employee['duty_status'] ?? 'Automatically Assigned'); ?></strong>
+                        </div>
+                        <?php else: ?>
                         <div>
                             <span>Assigned Pump</span>
                             <strong><?php echo e($employee['assigned_pump'] ?? 'Unassigned'); ?></strong>
@@ -115,6 +125,7 @@ require __DIR__ . '/../includes/header.php';
                             <span>Assigned Shift</span>
                             <strong><?php echo e($employee['shift'] ?? 'Pending'); ?></strong>
                         </div>
+                        <?php endif; ?>
                     </div>
                 </article>
             </div>
@@ -129,7 +140,7 @@ require __DIR__ . '/../includes/header.php';
                         <span class="status-pill status-waiting" id="photoStatus"><?php echo e($attendanceStatus['photo_status'] ?? 'Waiting...'); ?></span>
                     </div>
                     <div class="native-camera-stage">
-                        <input type="file" id="photoInput" class="visually-hidden" accept="image/*" capture="user">
+                        <input type="file" id="photoInput" name="clock_in_photo" class="visually-hidden" accept="image/*" capture="user" required>
                         <img id="capturedImage" alt="Captured employee selfie preview" hidden>
                         <div class="camera-placeholder" id="cameraPlaceholder">
                             <i class="fa-solid fa-camera-retro"></i>
@@ -162,7 +173,7 @@ require __DIR__ . '/../includes/header.php';
                         <h2>Ready to Start Shift?</h2>
                         <p>Clock-in becomes available after a selfie has been captured.</p>
                     </div>
-                    <button type="button" class="btn btn-clock-in" id="clockInBtn" disabled>
+                    <button type="submit" form="clockInForm" class="btn btn-clock-in" id="clockInBtn" disabled>
                         <i class="fa-solid fa-fingerprint"></i>
                         Clock In
                     </button>

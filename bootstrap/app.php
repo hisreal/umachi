@@ -16,15 +16,18 @@ use App\Core\Config;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Router;
+use App\Core\Session;
 use App\Services\ViewService;
 use App\Utilities\Env;
 
 Env::load(BASE_PATH . '/.env');
+Session::start();
 
 $config = new Config(CONFIG_PATH);
 date_default_timezone_set((string) $config->get('app.timezone', 'Africa/Lagos'));
 
 $request = Request::capture();
+(new App\Services\AuthService())->enforceSessionTimeout($request);
 $response = new Response();
 $view = new ViewService((string) $config->get('app.views_path', VIEW_PATH));
 $router = new Router($request, $response);
@@ -34,3 +37,4 @@ $app = new Application($config, $router, $request, $response, $view);
 (require ROUTES_PATH . '/web.php')($router);
 
 return $app;
+
