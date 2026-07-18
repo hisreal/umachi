@@ -102,12 +102,88 @@ class Attendance extends BaseModel
             $bindings['date'] = (string) $filters['date'];
         }
         if (trim((string) ($filters['search'] ?? '')) !== '') {
-            $where[] = "(e.employee_code LIKE :search OR CONCAT(e.first_name, ' ', e.last_name) LIKE :search)";
-            $bindings['search'] = '%' . trim((string) $filters['search']) . '%';
+            $where[] = "(e.employee_code LIKE :search_code OR CONCAT(e.first_name, ' ', e.last_name) LIKE :search_name)";
+            $bindings['search_code'] = '%' . trim((string) $filters['search']) . '%';
+            $bindings['search_name'] = '%' . trim((string) $filters['search']) . '%';
         }
 
         $rows = $this->query($this->attendanceSelectSql('WHERE ' . implode(' AND ', $where) . ' ORDER BY a.attendance_date DESC, a.id DESC LIMIT 200'), $bindings);
         return array_map([$this, 'mapAttendanceRow'], $rows);
+    }
+
+    public function attendanceDetails(int $recordId): ?array
+    {
+        $this->boot();
+        if ($recordId <= 0) {
+            return null;
+        }
+
+        $row = $this->queryOne(
+            $this->attendanceSelectSql('WHERE a.id = :id LIMIT 1'),
+            ['id' => $recordId]
+        );
+        if ($row === null) {
+            return null;
+        }
+
+        return [
+            'id' => (int) $row['id'],
+            'employee_db_id' => (int) $row['employee_id'],
+            'employee_name' => (string) $row['employee_name'],
+            'employee_id' => (string) $row['employee_code'],
+            'department' => (string) ($row['department_name'] ?? 'Unassigned'),
+            'role' => (string) ($row['role_name'] ?? 'Unassigned'),
+            'attendance_date' => (string) $row['attendance_date'],
+            'shift' => (string) ($row['shift_name'] ?? 'Unassigned'),
+            'status' => (string) $row['attendance_status'],
+            'clock_in_time' => empty($row['clock_in']) ? 'Not recorded' : date('h:i A', strtotime((string) $row['clock_in'])),
+            'clock_out_time' => empty($row['clock_out']) ? 'Not recorded' : date('h:i A', strtotime((string) $row['clock_out'])),
+            'clock_in_selfie_status' => $this->attendancePhotoStatus($row['clock_in_photo'] ?? null, 'clock-in'),
+            'clock_out_selfie_status' => $this->attendancePhotoStatus($row['clock_out_photo'] ?? null, 'clock-out'),
+            'lateness' => $this->minutesLabel((int) ($row['lateness_minutes'] ?? 0)),
+            'overtime' => $this->minutesLabel((int) ($row['overtime_minutes'] ?? 0)),
+            'remarks' => trim((string) ($row['remarks'] ?? '')) ?: 'No attendance remarks.',
+        ];
+    }
+
+    /** @return array{path: string, mime: string}|null */
+    public function attendanceSelfieFile(int $recordId, string $type): ?array
+    {
+        $this->boot();
+        if ($recordId <= 0 || !in_array($type, ['clock-in', 'clock-out'], true)) {
+            return null;
+        }
+        $column = $type === 'clock-in' ? 'clock_in_photo' : 'clock_out_photo';
+        $row = $this->queryOne(
+            "SELECT {$column} AS photo_path FROM attendance WHERE id = :id LIMIT 1",
+            ['id' => $recordId]
+        );
+
+        return $row === null ? null : $this->resolveAttendancePhoto($row['photo_path'] ?? null, $type);
+    }
+
+    private function attendancePhotoStatus(mixed $path, string $type): string
+    {
+        if (trim((string) $path) === '') {
+            return 'none';
+        }
+
+        return $this->resolveAttendancePhoto($path, $type) === null ? 'missing' : 'available';
+    }
+
+    private function minutesLabel(int $minutes): string
+    {
+        if ($minutes <= 0) {
+            return 'None';
+        }
+        $hours = intdiv($minutes, 60);
+        $remainder = $minutes % 60;
+        if ($hours === 0) {
+            return $minutes . ' minute' . ($minutes === 1 ? '' : 's');
+        }
+
+        return $hours . ' hour' . ($hours === 1 ? '' : 's')
+            . ($remainder > 0 ? ' ' . $remainder . ' minute' . ($remainder === 1 ? '' : 's') : '');
     }
 
     public function adminSummary(): array
@@ -360,6 +436,7 @@ class Attendance extends BaseModel
             'date' => (string) $row['attendance_date'],
             'employee_id' => (string) $row['employee_code'],
             'name' => (string) $row['employee_name'],
+            'id' => (int) $row['id'],
             'department' => (string) ($row['department_name'] ?? 'Unassigned'),
             'role' => (string) ($row['role_name'] ?? 'Unassigned'),
             'clock_in' => empty($row['clock_in']) ? '-' : date('h:i A', strtotime((string) $row['clock_in'])),
@@ -372,6 +449,46 @@ class Attendance extends BaseModel
             'verification_status' => (string) ($row['verification_status'] ?? 'Pending'),
             'photo_status' => !empty($row['clock_in_photo']) ? 'Captured' : 'Missing',
         ];
+    }
+
+    /** @return array{path: string, mime: string}|null */
+    private function resolveAttendancePhoto(mixed $storedPath, string $type): ?array
+    {
+        $path = str_replace('\\', '/', trim((string) $storedPath));
+        if ($path === '' || str_contains($path, "\0") || !in_array($type, ['clock-in', 'clock-out'], true)) {
+            return null;
+        }
+        $path = ltrim($path, '/');
+        if (str_starts_with($path, 'public/')) {
+            $path = substr($path, 7);
+        }
+        $pattern = '#^uploads/attendance/' . preg_quote($type, '#') . '/[A-Za-z0-9._-]+\.(?:jpe?g|png|webp)$#i';
+        if (preg_match($pattern, $path) !== 1) {
+            return null;
+        }
+
+        $publicRoot = realpath(BASE_PATH . '/public');
+        $expectedDirectory = realpath(BASE_PATH . '/public/uploads/attendance/' . $type);
+        if ($publicRoot === false || $expectedDirectory === false) {
+            return null;
+        }
+        $candidate = realpath($publicRoot . '/' . $path);
+        $directoryPrefix = rtrim($expectedDirectory, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        if (
+            $candidate === false
+            || !is_file($candidate)
+            || !is_readable($candidate)
+            || !str_starts_with($candidate, $directoryPrefix)
+        ) {
+            return null;
+        }
+
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($candidate) ?: '';
+        if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+            return null;
+        }
+
+        return ['path' => $candidate, 'mime' => $mime];
     }
 
     private function addColumnIfMissing(string $table, string $column, string $sql): void

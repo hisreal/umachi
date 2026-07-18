@@ -22,7 +22,12 @@ final class AdminNavigationService
         $roles = Session::get('auth.roles', []);
         $roles = is_array($roles) ? array_map('strval', $roles) : [];
         $displayRole = trim((string) Session::get('auth.role', ''));
-        if ($displayRole !== '' && !in_array($displayRole, $roles, true)) {
+
+        // Manager, Supervisor, and Accountant are Admin-only roles. Filter navigation using
+        // the active login role so unrelated roles cannot expose extra menu items.
+        if (in_array(strtolower($displayRole), ['manager', 'supervisor', 'accountant'], true)) {
+            $roles = [$displayRole];
+        } elseif ($displayRole !== '' && !in_array($displayRole, $roles, true)) {
             $roles[] = $displayRole;
         }
 

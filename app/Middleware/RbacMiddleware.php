@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Middleware;
 
 use App\Core\Request;
-use App\Core\Database;
 use App\Core\Response;
 use App\Core\Session;
 use App\Services\AuthService;
 use App\Services\RbacService;
+use App\Services\ActivityLogService;
 
 class RbacMiddleware implements MiddlewareInterface
 {
@@ -37,13 +37,20 @@ class RbacMiddleware implements MiddlewareInterface
         }
 
         $roles = $this->auth->roles();
-        $normalizedRoles = array_map(static fn (string $role): string => strtolower(trim($role)), $roles);
-        $isAccountant = in_array('accountant', $normalizedRoles, true);
-        $profileRoutes = $isAccountant
+        $activeRole = strtolower(trim((string) Session::get('auth.role', '')));
+        $isAdminOnlyRole = in_array($activeRole, ['manager', 'supervisor', 'accountant'], true);
+
+        // Admin-only roles are authorized using the role selected at login. This
+        // prevents a multi-role account from inheriting attendant-module access.
+        $authorizationRoles = $isAdminOnlyRole
+            ? [ucfirst($activeRole)]
+            : $roles;
+
+        $profileRoutes = $isAdminOnlyRole
             ? ['admin/edit-profile', 'admin/change-password', 'auth/logout', 'logout']
             : ['profile/complete', 'auth/logout', 'logout'];
         if (!$this->auth->profileCompleted() && !in_array($route, $profileRoutes, true)) {
-            $response->redirect(route_url($isAccountant ? 'admin/edit-profile' : 'profile/complete'));
+            $response->redirect(route_url($isAdminOnlyRole ? 'admin/edit-profile' : 'profile/complete'));
         }
 
         $passwordRoutes = ['admin/change-password', 'profile/change-password', 'change-password', 'profile/complete', 'auth/logout', 'logout'];
@@ -61,14 +68,21 @@ class RbacMiddleware implements MiddlewareInterface
             'settings',
             'announcements',
         ];
+        if ($route === 'admin/activity-log' && !in_array($activeRole, ['admin', 'administrator'], true)) {
+            $this->logDeniedAccess($request, $authorizationRoles);
+            $response->setStatusCode(403);
+            echo '403 Forbidden - You do not have permission to access this page.';
+            return;
+        }
 
-        if (!$isAccountant && in_array($route, $selfServiceRoutes, true)) {
+
+        if (!$isAdminOnlyRole && in_array($route, $selfServiceRoutes, true)) {
             $next($request, $response);
             return;
         }
 
-        if (!$this->rbac->canAccess($route, $roles)) {
-            $this->logDeniedAccess($request, $roles);
+        if (!$this->rbac->canAccess($route, $authorizationRoles)) {
+            $this->logDeniedAccess($request, $authorizationRoles);
             $response->setStatusCode(403);
             echo '403 Forbidden - You do not have permission to access this page.';
             return;
@@ -79,40 +93,16 @@ class RbacMiddleware implements MiddlewareInterface
 
     private function logDeniedAccess(Request $request, array $roles): void
     {
-        try {
-            Database::getInstance()->insert('activity_logs', [
-                'log_code' => 'ACT-' . date('YmdHis') . '-' . random_int(100, 999),
-                'user_id' => Session::get('auth.user_id') !== null ? (int) Session::get('auth.user_id') : null,
-                'employee_id' => ($employeeId = (int) Session::get('auth.employee_id', 0)) > 0 ? $employeeId : null,
-                'activity_type' => 'Unauthorized Access Attempt',
-                'module' => 'RBAC',
-                'activity' => 'Access Denied: ' . $request->route(),
-                'entity_type' => 'route',
-                'entity_id' => null,
-                'old_value' => null,
-                'new_value' => json_encode([
-                    'route' => $request->route(),
-                    'roles' => array_values(array_map('strval', $roles)),
-                ], JSON_THROW_ON_ERROR),
-                'ip_address' => $request->ip(),
-                'browser' => $this->browserFromUserAgent($request->userAgent()),
-                'status' => 'warning',
-                'notes' => 'Server-side RBAC denied this request.',
-            ]);
-        } catch (\Throwable $exception) {
-            error_log('[RBAC Audit] ' . $exception->getMessage());
-        }
-    }
-
-    private function browserFromUserAgent(string $userAgent): string
-    {
-        return match (true) {
-            str_contains($userAgent, 'Edg') => 'Edge',
-            str_contains($userAgent, 'Firefox') => 'Firefox',
-            str_contains($userAgent, 'Chrome') => 'Chrome',
-            str_contains($userAgent, 'Safari') => 'Safari',
-            default => 'Unknown',
-        };
+        (new ActivityLogService())->record(
+            'Permission Denied',
+            'Security',
+            'Unauthorized page access was blocked for route: ' . $request->route(),
+            ['entity_type' => 'route', 'notes' => 'Server-side RBAC denied this request.'],
+            'warning',
+            null,
+            ['route' => $request->route(), 'roles' => array_values(array_map('strval', $roles))],
+            $request
+        );
     }
 }
 

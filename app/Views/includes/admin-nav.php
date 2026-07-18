@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+$dashboardMenuLabel = \App\Services\DashboardLabelService::forCurrentUser();
+
 $items = [
-    ['label' => 'Dashboard', 'route' => 'admin/dashboard', 'icon' => 'fa-solid fa-gauge-high'],
+    ['label' => $dashboardMenuLabel, 'route' => 'admin/dashboard', 'icon' => 'fa-solid fa-gauge-high'],
     [
         'label' => 'Employee Management',
         'icon' => 'fa-solid fa-users',

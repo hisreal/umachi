@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 use App\Models\Announcement;
 
-$pageTitle = 'Admin Dashboard | FuelOps Management System';
-$pageHeading = 'Dashboard';
-$topbarSubtitle = 'Admin Dashboard';
+$dashboardLabel = \App\Services\DashboardLabelService::forCurrentUser();
+$pageTitle = $dashboardLabel . ' | FuelOps Management System';
+$pageHeading = $dashboardLabel;
+$topbarSubtitle = $dashboardLabel;
 $currentRoute = $currentRoute ?? 'admin/dashboard';
 $extraStyles = ['css/clock-in.css', 'css/admin-dashboard.css'];
 $extraScripts = ['js/admin-dashboard.js'];

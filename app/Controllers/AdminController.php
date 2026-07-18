@@ -8,11 +8,14 @@ use App\Core\Controller;
 use App\Core\Request;
 use App\Core\Response;
 use App\Core\Session;
+use App\Models\Attendance;
+use App\Models\ActivityLog;
 use App\Models\Announcement;
 use App\Models\FuelInventory;
 use App\Models\FuelSale;
 use App\Models\LeaveManagement;
 use App\Models\Profile;
+use App\Services\ActivityLogService;
 use App\Services\AuthService;
 use App\Services\DutyManagementService;
 use App\Services\DashboardService;
@@ -33,6 +36,147 @@ class AdminController extends Controller
             'currentRoute' => 'admin/dashboard',
             'navItems' => $this->adminNavItems(),
         ]));
+    }
+
+    public function activityLog(): void
+    {
+        $request = Request::capture();
+        $filters = [
+            'search' => trim((string) $request->query('search', '')),
+            'date_from' => trim((string) $request->query('date_from', '')),
+            'date_to' => trim((string) $request->query('date_to', '')),
+            'employee' => trim((string) $request->query('employee', '')),
+            'role' => trim((string) $request->query('role', '')),
+            'module' => trim((string) $request->query('module', '')),
+            'action' => trim((string) $request->query('action', '')),
+            'status' => trim((string) $request->query('status', '')),
+            'sort' => trim((string) $request->query('sort', 'date')),
+            'direction' => trim((string) $request->query('direction', 'desc')),
+            'page' => max(1, (int) $request->query('page', 1)),
+            'per_page' => min(100, max(10, (int) $request->query('per_page', 20))),
+        ];
+
+        try {
+            $model = new ActivityLog();
+            $activityPage = $model->page($filters);
+            $activityStats = $model->stats();
+            $activityOptions = $model->options();
+        } catch (\Throwable $exception) {
+            error_log('[Activity Log Page] ' . $exception->getMessage());
+            $activityPage = ['items' => [], 'total' => 0, 'page' => 1, 'per_page' => 20, 'pages' => 1, 'from' => 0, 'to' => 0];
+            $activityStats = [];
+            $activityOptions = ['employees' => [], 'roles' => [], 'modules' => [], 'actions' => [], 'statuses' => []];
+            Session::flash('activity_log_error', 'Activity records could not be loaded. Please try again.');
+        }
+
+        $this->render('admin/activity-log.php', [
+            'currentRoute' => 'admin/activity-log',
+            'navItems' => $this->adminNavItems(),
+            'activityLogs' => $activityPage['items'],
+            'activityPage' => $activityPage,
+            'activityStats' => $activityStats,
+            'activityOptions' => $activityOptions,
+            'activityFilters' => $filters,
+            'activityLogError' => Session::pullFlash('activity_log_error'),
+        ]);
+    }
+
+    public function attendanceDetails(): void
+    {
+        $request = Request::capture();
+        if (!$this->canViewAttendanceSelfies()) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'You do not have permission to view attendance selfies.']);
+            return;
+        }
+
+        $recordId = (int) $request->query('id', 0);
+        try {
+            $details = (new Attendance())->attendanceDetails($recordId);
+            if ($details === null) {
+                http_response_code(404);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Attendance record not found.']);
+                return;
+            }
+
+            $imageRoute = route_url('admin/attendance-history/selfie') . '&id=' . $recordId . '&type=';
+            $details['clock_in_selfie_url'] = $details['clock_in_selfie_status'] === 'available'
+                ? $imageRoute . 'clock-in'
+                : null;
+            $details['clock_out_selfie_url'] = $details['clock_out_selfie_status'] === 'available'
+                ? $imageRoute . 'clock-out'
+                : null;
+
+            (new ActivityLogService())->record(
+                'Attendance Selfie Viewed',
+                'Attendance',
+                'Attendance selfies viewed for ' . $details['employee_name'] . ' on ' . $details['attendance_date'] . '.',
+                [
+                    'employee_id' => (int) $details['employee_db_id'],
+                    'entity_type' => 'attendance',
+                    'entity_id' => $recordId,
+                ],
+                'success',
+                null,
+                ['attendance_record_id' => $recordId, 'attendance_date' => $details['attendance_date']],
+                $request
+            );
+
+            unset($details['employee_db_id']);
+            header('Content-Type: application/json; charset=utf-8');
+            header('Cache-Control: private, no-store');
+            echo json_encode(['success' => true, 'record' => $details], JSON_THROW_ON_ERROR);
+        } catch (\Throwable $exception) {
+            error_log('[Attendance Selfie Details] ' . $exception->getMessage());
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'Attendance details could not be loaded.']);
+        }
+    }
+
+    public function attendanceSelfie(): void
+    {
+        $request = Request::capture();
+        if (!$this->canViewAttendanceSelfies()) {
+            http_response_code(403);
+            echo '403 Forbidden - You do not have permission to view attendance selfies.';
+            return;
+        }
+
+        $recordId = (int) $request->query('id', 0);
+        $type = trim((string) $request->query('type', ''));
+        try {
+            $file = (new Attendance())->attendanceSelfieFile($recordId, $type);
+            if ($file === null) {
+                http_response_code(404);
+                header('Content-Type: text/plain; charset=utf-8');
+                echo 'Image not available.';
+                return;
+            }
+
+            header('Content-Type: ' . $file['mime']);
+            header('Content-Length: ' . (string) filesize($file['path']));
+            header('Content-Disposition: inline');
+            header('Cache-Control: private, no-store, max-age=0');
+            header('X-Content-Type-Options: nosniff');
+            readfile($file['path']);
+        } catch (\Throwable $exception) {
+            error_log('[Attendance Selfie Image] ' . $exception->getMessage());
+            http_response_code(404);
+            header('Content-Type: text/plain; charset=utf-8');
+            echo 'Image not available.';
+        }
+    }
+
+    private function canViewAttendanceSelfies(): bool
+    {
+        return in_array(
+            strtolower(trim((string) Session::get('auth.role', ''))),
+            ['admin', 'administrator', 'manager', 'supervisor'],
+            true
+        );
     }
 
     /**
@@ -114,7 +258,7 @@ class AdminController extends Controller
         $data['emergency_contact'] = (string) $request->post('emergency_phone', '');
 
         try {
-            (new Profile())->updateCurrentUser($data, $_FILES);
+            (new Profile())->updateCurrentUser($data, $_FILES, true);
             Session::flash('profile_success', 'Profile updated successfully.');
             $response->redirect(route_url('admin/profile'));
         } catch (\RuntimeException $exception) {

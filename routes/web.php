@@ -61,6 +61,9 @@ return static function (Router $router): void {
     $router->post('admin/duty-assignments/save', [AdminController::class, 'saveDutyAssignment']);
     $router->post('admin/duty-assignments/cancel', [AdminController::class, 'cancelDutyAssignment']);
     $router->post('admin/duty-assignments/delete', [AdminController::class, 'deleteDutyAssignment']);
+    $router->get('admin/activity-log', [AdminController::class, 'activityLog']);
+    $router->get('admin/attendance-history/details', [AdminController::class, 'attendanceDetails']);
+    $router->get('admin/attendance-history/selfie', [AdminController::class, 'attendanceSelfie']);
     $router->get(['admin', 'admin/dashboard'], [AdminController::class, 'dashboard']);
     $router->get(['', 'dashboard', 'attendance'], [AttendanceController::class, 'dashboard']);
     $router->get('attendance/clock-in', [AttendanceController::class, 'clockIn']);

@@ -17,9 +17,14 @@ $employee = ['name' => 'Administrator', 'role' => 'System Administrator'];
 $attendantName = $employee['name'];
 $attendantRole = $employee['role'];
 require __DIR__ . '/announcement-data.php';
+$announcementRoles = (new \App\Services\AuthService())->roles();
+$activeAnnouncementRole = trim((string) \App\Core\Session::get('auth.role', ''));
+if (in_array(strtolower($activeAnnouncementRole), ['manager', 'supervisor', 'accountant'], true)) {
+    $announcementRoles = [$activeAnnouncementRole];
+}
 $canManageAnnouncements = (new \App\Services\RbacService())->canAccess(
     'admin/announcements/store',
-    (new \App\Services\AuthService())->roles()
+    $announcementRoles
 );
 require __DIR__ . '/../includes/header.php';
 ?>
