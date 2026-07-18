@@ -8,13 +8,14 @@ $sidebarHomeRoute = trim((string) ($sidebarHomeRoute ?? 'dashboard'), '/');
 $sidebarBrandTitle = $sidebarBrandTitle ?? 'FuelOps';
 $sidebarBrandSubtitle = $sidebarBrandSubtitle ?? 'Staff Panel';
 if (!isset($navItems)) {
+    $dashboardMenuLabel = \App\Services\DashboardLabelService::forCurrentUser();
     $roles = \App\Core\Session::get('auth.roles', []);
     $roles = is_array($roles) ? array_map('strval', $roles) : [];
     $roles[] = (string) \App\Core\Session::get('auth.role', '');
     $dutyPolicy = new \App\Services\AttendanceDutyPolicyService();
     $isPumpAttendant = array_filter($roles, [$dutyPolicy, 'requiresManualDuty']) !== [];
     $navItems = [
-    ['label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'fa-solid fa-gauge-high'],
+    ['label' => $dashboardMenuLabel, 'route' => 'dashboard', 'icon' => 'fa-solid fa-gauge-high'],
     ['label' => 'Clock In', 'route' => 'attendance/clock-in', 'icon' => 'fa-solid fa-fingerprint'],
     ['label' => 'Clock Out', 'route' => 'attendance/clock-out', 'icon' => 'fa-solid fa-arrow-right-from-bracket'],
     ...($isPumpAttendant ? [['label' => 'Fuel Sales History', 'route' => 'fuel-sales/history', 'icon' => 'fa-solid fa-gas-pump']] : []),

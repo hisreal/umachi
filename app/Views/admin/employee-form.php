@@ -135,28 +135,6 @@ if (!isset($formEmployee['emergency_contact_name'], $formEmployee['emergency_con
             <div class="col-md-4"><label class="form-label" for="employmentType">Employment Type</label><select class="form-select" id="employmentType" name="employment_type" required><option value="">Select type</option><?php foreach ($employmentTypes as $employmentType): ?><option value="<?php echo e($employmentType); ?>" <?php echo $formEmployee['employment_type'] === $employmentType ? 'selected' : ''; ?>><?php echo e($employmentType); ?></option><?php endforeach; ?></select></div>
             <div class="col-md-4"><label class="form-label" for="employmentStatus">Employment Status</label><select class="form-select" id="employmentStatus" name="status" required><?php foreach ($statuses as $status): ?><option value="<?php echo e($status); ?>" <?php echo $formEmployee['status'] === $status ? 'selected' : ''; ?>><?php echo e($status); ?></option><?php endforeach; ?></select></div>
             <div class="col-md-4"><label class="form-label" for="dateJoined">Date Joined</label><input class="form-control" type="date" id="dateJoined" name="date_joined" value="<?php echo e($formEmployee['date_joined']); ?>" required></div>
-            <div class="col-md-4"><label class="form-label" for="supervisor">Supervisor</label><input class="form-control" id="supervisor" name="supervisor" value="<?php echo e($formEmployee['supervisor']); ?>" required></div>
-            <div class="col-md-4"><label class="form-label" for="workShift">Work Shift</label><select class="form-select" id="workShift" name="work_shift" required><option value="">Select shift</option><?php foreach ($shifts as $shift): ?><option value="<?php echo e($shift); ?>" <?php echo $formEmployee['shift'] === $shift ? 'selected' : ''; ?>><?php echo e($shift); ?></option><?php endforeach; ?></select></div>
-        </div>
-    </article>
-
-    <article class="app-card card employee-form-section">
-        <div class="employee-section-heading"><span><i class="fa-solid fa-money-check-dollar"></i></span><div><small>Section 3</small><h2>Salary Information</h2></div></div>
-        <div class="row g-3">
-            <div class="col-md-4"><label class="form-label" for="basicSalary">Basic Salary</label><input class="form-control" type="number" id="basicSalary" name="salary" value="<?php echo e((string) $formEmployee['salary']); ?>" required></div>
-            <div class="col-md-4"><label class="form-label" for="allowance">Allowance</label><input class="form-control" type="number" id="allowance" name="allowance" value="<?php echo e((string) $formEmployee['allowance']); ?>" required></div>
-            <div class="col-md-4"><label class="form-label" for="bankName">Bank Name</label><input class="form-control" id="bankName" name="bank_name" value="<?php echo e($formEmployee['bank_name']); ?>" required></div>
-            <div class="col-md-6"><label class="form-label" for="accountName">Account Name</label><input class="form-control" id="accountName" name="account_name" value="<?php echo e($formEmployee['account_name']); ?>" required></div>
-            <div class="col-md-6"><label class="form-label" for="accountNumber">Account Number</label><input class="form-control" id="accountNumber" name="account_number" value="<?php echo e($formEmployee['account_number']); ?>" required></div>
-        </div>
-    </article>
-
-    <article class="app-card card employee-form-section">
-        <div class="employee-section-heading"><span><i class="fa-solid fa-lock"></i></span><div><small>Section 4</small><h2>Login Details</h2></div></div>
-        <div class="row g-3">
-            <div class="col-md-4"><label class="form-label" for="username">Username</label><input class="form-control" id="username" name="username" value="<?php echo e(strtolower(str_replace(' ', '.', trim(($formEmployee['first_name'] ?? '') . ' ' . ($formEmployee['last_name'] ?? ''))))); ?>" required></div>
-            <div class="col-md-4"><label class="form-label" for="password">Password</label><div class="employee-password-field"><input class="form-control" type="password" id="password" name="password" <?php echo $isEditMode ? '' : 'required'; ?>><button class="btn btn-light" type="button" data-toggle-password="#password"><i class="fa-solid fa-eye"></i></button></div><div class="password-strength" id="passwordStrength"><span></span></div></div>
-            <div class="col-md-4"><label class="form-label" for="confirmPassword">Confirm Password</label><div class="employee-password-field"><input class="form-control" type="password" id="confirmPassword" name="confirm_password" <?php echo $isEditMode ? '' : 'required'; ?>><button class="btn btn-light" type="button" data-toggle-password="#confirmPassword"><i class="fa-solid fa-eye"></i></button></div></div>
         </div>
     </article>
 

@@ -95,6 +95,10 @@ class Database
     public function insert(string $table, array $data): int|string
     {
         $this->guardTable($table);
+        if ($table === 'activity_logs') {
+            $data = (new \App\Services\ActivityLogService($this))->enrichLegacyPayload($data);
+        }
+
         $this->guardData($data);
 
         $columns = array_keys($data);

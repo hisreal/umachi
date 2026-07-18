@@ -25,19 +25,7 @@ require __DIR__ . '/employee-data.php';
 // Retrieve employee attendance, leave, and duty
 // records from MySQL.
 // ============================================
-$recentAttendance = [
-    ['date' => '2026-07-07', 'clock_in' => '06:02 AM', 'clock_out' => '02:05 PM', 'status' => 'Present'],
-    ['date' => '2026-07-06', 'clock_in' => '06:08 AM', 'clock_out' => '02:01 PM', 'status' => 'Present'],
-    ['date' => '2026-07-05', 'clock_in' => '06:18 AM', 'clock_out' => '02:00 PM', 'status' => 'Late'],
-];
-$leaveHistory = [
-    ['type' => 'Annual Leave', 'duration' => '5 Days', 'status' => 'Approved'],
-    ['type' => 'Sick Leave', 'duration' => '2 Days', 'status' => 'Pending'],
-];
-$assignedDuties = [
-    ['date' => '2026-07-07', 'pump' => 'Pump 1', 'fuel_type' => 'Petrol (PMS)', 'shift' => 'Morning'],
-    ['date' => '2026-07-08', 'pump' => 'Pump 3', 'fuel_type' => 'Diesel (AGO)', 'shift' => 'Evening'],
-];
+
 require __DIR__ . '/../includes/header.php';
 ?>
 <main class="clock-in-page employee-module-page">
@@ -62,11 +50,7 @@ require __DIR__ . '/../includes/header.php';
             </div>
         </div>
 
-        <div class="row g-4 mt-1">
-            <?php foreach ([['title' => 'Recent Attendance', 'rows' => $recentAttendance, 'columns' => ['Date', 'Clock In', 'Clock Out', 'Status']], ['title' => 'Leave History', 'rows' => $leaveHistory, 'columns' => ['Leave Type', 'Duration', 'Status']], ['title' => 'Assigned Duties', 'rows' => $assignedDuties, 'columns' => ['Date', 'Pump', 'Fuel Type', 'Shift']]] as $table): ?>
-                <div class="col-12 col-xl-4"><article class="app-card card employee-mini-table"><h2><?php echo e($table['title']); ?></h2><div class="table-responsive"><table class="table attendance-table align-middle"><thead><tr><?php foreach ($table['columns'] as $column): ?><th><?php echo e($column); ?></th><?php endforeach; ?></tr></thead><tbody><?php foreach ($table['rows'] as $row): ?><tr><?php foreach ($row as $key => $value): ?><td><?php echo in_array($key, ['status'], true) ? '<span class="table-badge ' . e($statusClasses[$value] ?? 'employee-status--active') . '">' . e($value) . '</span>' : e((string) $value); ?></td><?php endforeach; ?></tr><?php endforeach; ?></tbody></table></div></article></div>
-            <?php endforeach; ?>
-        </div>
+       
     </section>
 </main>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

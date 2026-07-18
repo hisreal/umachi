@@ -1,0 +1,68 @@
+diff --git a/app/Views/includes/admin-nav.php b/app/Views/includes/admin-nav.php
+--- a/app/Views/includes/admin-nav.php
++++ b/app/Views/includes/admin-nav.php
+@@ -2,8 +2,10 @@
+ 
+ declare(strict_types=1);
+ 
++$dashboardMenuLabel = \App\Services\DashboardLabelService::forCurrentUser();
++
+ $items = [
+-    ['label' => 'Dashboard', 'route' => 'admin/dashboard', 'icon' => 'fa-solid fa-gauge-high'],
++    ['label' => $dashboardMenuLabel, 'route' => 'admin/dashboard', 'icon' => 'fa-solid fa-gauge-high'],
+diff --git a/app/Views/includes/sidebar.php b/app/Views/includes/sidebar.php
+--- a/app/Views/includes/sidebar.php
++++ b/app/Views/includes/sidebar.php
+@@ -13,8 +13,9 @@
+     $roles[] = (string) \App\Core\Session::get('auth.role', '');
+     $dutyPolicy = new \App\Services\AttendanceDutyPolicyService();
+     $isPumpAttendant = array_filter($roles, [$dutyPolicy, 'requiresManualDuty']) !== [];
++    $dashboardMenuLabel = \App\Services\DashboardLabelService::forCurrentUser();
+     $navItems = [
+-    ['label' => 'Dashboard', 'route' => 'dashboard', 'icon' => 'fa-solid fa-gauge-high'],
++    ['label' => $dashboardMenuLabel, 'route' => 'dashboard', 'icon' => 'fa-solid fa-gauge-high'],
+diff --git a/app/Views/admin/dashboard.php b/app/Views/admin/dashboard.php
+--- a/app/Views/admin/dashboard.php
++++ b/app/Views/admin/dashboard.php
+@@ -4,9 +4,10 @@
+ 
+ use App\Models\Announcement;
+ 
+-$pageTitle = 'Admin Dashboard | FuelOps Management System';
+-$pageHeading = 'Dashboard';
+-$topbarSubtitle = 'Admin Dashboard';
++$dashboardLabel = \App\Services\DashboardLabelService::forCurrentUser();
++$pageTitle = $dashboardLabel . ' | FuelOps Management System';
++$pageHeading = $dashboardLabel;
++$topbarSubtitle = $dashboardLabel;
+diff --git a/app/Controllers/AttendanceController.php b/app/Controllers/AttendanceController.php
+--- a/app/Controllers/AttendanceController.php
++++ b/app/Controllers/AttendanceController.php
+@@ -6,6 +6,7 @@
+ 
+ use App\Core\Controller;
+ use App\Core\Request;
++use App\Services\DashboardLabelService;
+ use App\Core\Response;
+@@ -41,6 +42,7 @@
+     public function dashboard(): void
+     {
+         $auth = new AuthService();
++        $dashboardLabel = DashboardLabelService::forCurrentUser();
+         $dutyPolicy = new AttendanceDutyPolicyService();
+@@ -56,8 +58,8 @@
+ 
+         $this->renderStaticPage('dashboard', array_merge((new DashboardService())->attendant(), [
+-            'pageTitle' => 'Dashboard | FuelOps Staff Dashboard',
+-            'pageHeading' => 'Dashboard',
++            'pageTitle' => $dashboardLabel . ' | FuelOps Staff Dashboard',
++            'pageHeading' => $dashboardLabel,
+diff --git a/app/Views/attendant/dashboard-page.php b/app/Views/attendant/dashboard-page.php
+--- a/app/Views/attendant/dashboard-page.php
++++ b/app/Views/attendant/dashboard-page.php
+@@ -16,7 +16,7 @@
+ $emptyMessage = $emptyMessage ?? 'No records available yet.';
+ $employee = $employee ?? ['name' => 'Station Staff', 'role' => 'Pump Attendant', 'photo' => 'images/sample-passport.svg'];
+-$topbarSubtitle = (string) ($employee['role'] ?? 'Staff') . ' Dashboard';
++$topbarSubtitle = \App\Services\DashboardLabelService::forCurrentUser();
+ $attendantName = $employee['name'] ?? 'Station Staff';

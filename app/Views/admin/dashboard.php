@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 use App\Models\Announcement;
 
-$pageTitle = 'Admin Dashboard | FuelOps Management System';
-$pageHeading = 'Dashboard';
-$topbarSubtitle = 'Admin Dashboard';
+$dashboardLabel = \App\Services\DashboardLabelService::forCurrentUser();
+$pageTitle = $dashboardLabel . ' | FuelOps Management System';
+$pageHeading = $dashboardLabel;
+$topbarSubtitle = $dashboardLabel;
 $currentRoute = $currentRoute ?? 'admin/dashboard';
 $extraStyles = ['css/clock-in.css', 'css/admin-dashboard.css'];
 $extraScripts = ['js/admin-dashboard.js'];
@@ -141,14 +142,7 @@ require __DIR__ . '/../includes/header.php';
             <?php endforeach; ?>
         </div>
 
-        <div class="admin-kpi-grid mt-4" aria-label="Operational summaries">
-            <article class="admin-kpi-card admin-kpi-card--warning" <?php echo empty($dashboardSections['attendance']) ? 'hidden' : ''; ?>><span class="admin-kpi-icon"><i class="fa-solid fa-clock"></i></span><div><span>Late Today</span><strong><?php echo e((string) ($attendanceSummary['late'] ?? 0)); ?></strong></div></article>
-            <article class="admin-kpi-card admin-kpi-card--info" <?php echo empty($dashboardSections['attendance']) ? 'hidden' : ''; ?>><span class="admin-kpi-icon"><i class="fa-solid fa-business-time"></i></span><div><span>Overtime Employees</span><strong><?php echo e((string) ($attendanceSummary['overtime'] ?? 0)); ?></strong></div></article>
-            <article class="admin-kpi-card admin-kpi-card--success" <?php echo empty($dashboardSections['leave']) ? 'hidden' : ''; ?>><span class="admin-kpi-icon"><i class="fa-solid fa-check-double"></i></span><div><span>Leave Approved Today</span><strong><?php echo e((string) ($leaveSummary['approved_today'] ?? 0)); ?></strong></div></article>
-            <article class="admin-kpi-card admin-kpi-card--danger" <?php echo empty($dashboardSections['inventory']) ? 'hidden' : ''; ?>><span class="admin-kpi-icon"><i class="fa-solid fa-triangle-exclamation"></i></span><div><span>Low Stock Alerts</span><strong><?php echo e((string) ($dashboard['low_stock'] ?? 0)); ?></strong></div></article>
-            <article class="admin-kpi-card admin-kpi-card--primary" <?php echo empty($dashboardSections['duty']) ? 'hidden' : ''; ?>><span class="admin-kpi-icon"><i class="fa-solid fa-sun"></i></span><div><span>Morning Shift Employees</span><strong><?php echo e((string) ($dutySummary['morning'] ?? 0)); ?></strong></div></article>
-            <article class="admin-kpi-card admin-kpi-card--purple" <?php echo empty($dashboardSections['duty']) ? 'hidden' : ''; ?>><span class="admin-kpi-icon"><i class="fa-solid fa-moon"></i></span><div><span>Evening Shift Employees</span><strong><?php echo e((string) ($dutySummary['evening'] ?? 0)); ?></strong></div></article>
-        </div>
+        
         <div class="row g-4 mt-1">
             <div class="col-12 col-xl-4" <?php echo empty($dashboardSections['attendance']) ? 'hidden' : ''; ?>>
                 <article class="app-card card admin-chart-card">
@@ -194,28 +188,7 @@ require __DIR__ . '/../includes/header.php';
             </div>
         </div>
 
-        <section class="admin-section mt-4" aria-labelledby="quickActionsTitle">
-            <div class="admin-section-header">
-                <div>
-                    <span class="eyebrow">Fast Access</span>
-                    <h2 id="quickActionsTitle">Quick Actions</h2>
-                </div>
-            </div>
-            <div class="row g-4">
-                <?php foreach ($quickActions as $action): ?>
-                    <div class="col-12 col-md-6 col-xl-4">
-                        <a class="admin-action-card app-card card" href="<?php echo e(route_url($action['route'])); ?>">
-                            <span class="admin-action-icon"><i class="<?php echo e($action['icon']); ?>"></i></span>
-                            <div>
-                                <h3><?php echo e($action['title']); ?></h3>
-                                <p><?php echo e($action['description']); ?></p>
-                            </div>
-                            <span class="admin-action-link">Open <i class="fa-solid fa-arrow-right"></i></span>
-                        </a>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </section>
+     
 
         <div class="row g-4 mt-1 align-items-start">
             <div class="col-12 col-xl-8">

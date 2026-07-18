@@ -142,7 +142,7 @@ class LeaveManagement extends BaseModel
         $from = (string)$request['status'];
         $mode = $this->approvalMode();
         $stage = (string)($request['current_stage'] ?? '');
-        $this->ensureSupervisorCanProcessStage($stage);
+        $this->ensureActiveApproverCanProcessStage($stage);
         $status = match ($action) {'approve'=>$this->isFinal($mode,$stage)?'approved':'forwarded','forward'=>'forwarded','reject'=>'rejected',default=>throw new RuntimeException('Select a valid approval action.')};
         $newStage = $status === 'approved' ? 'Completed' : ($status === 'rejected' ? 'Rejected' : $this->nextStage($mode, $stage));
         $this->transaction(function (Database $database) use ($request, $id, $action, $comments, $from, $status, $newStage): void {
@@ -388,20 +388,17 @@ class LeaveManagement extends BaseModel
         };
     }
 
-    private function ensureSupervisorCanProcessStage(string $stage): void
+    private function ensureActiveApproverCanProcessStage(string $stage): void
     {
-        $roles = Session::get('auth.roles', []);
-        $roles = is_array($roles) ? array_map(static fn (mixed $role): string => strtolower(trim((string) $role)), $roles) : [];
         $displayRole = strtolower(trim((string) Session::get('auth.role', '')));
-        if ($displayRole !== '') {
-            $roles[] = $displayRole;
-        }
-        $roles = array_values(array_unique($roles));
-        $isPrivileged = array_intersect(['admin', 'administrator', 'manager'], $roles) !== [];
-        $isSupervisor = in_array('supervisor', $roles, true);
+        $normalizedStage = strtolower($stage);
 
-        if ($isSupervisor && !$isPrivileged && !str_contains(strtolower($stage), 'supervisor')) {
+        if ($displayRole === 'supervisor' && !str_contains($normalizedStage, 'supervisor')) {
             throw new RuntimeException('This leave request is not currently awaiting Supervisor approval.');
+        }
+
+        if ($displayRole === 'manager' && !str_contains($normalizedStage, 'manager')) {
+            throw new RuntimeException('This leave request is not currently awaiting Manager approval.');
         }
     }
 

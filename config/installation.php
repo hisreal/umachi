@@ -10,7 +10,7 @@ return [
         'password' => env('DEFAULT_ADMIN_PASSWORD', 'password1'),
         'role' => env('DEFAULT_ADMIN_ROLE', 'Admin'),
         'full_name' => env('DEFAULT_ADMIN_FULL_NAME', 'System Administrator'),
-        'email' => env('DEFAULT_ADMIN_EMAIL', 'admin@localhost.com'),
+        'email' => env('DEFAULT_ADMIN_EMAIL', 'admin@umachi.com'),
         'status' => env('DEFAULT_ADMIN_STATUS', 'active'),
         'must_change_password' => true,
     ],

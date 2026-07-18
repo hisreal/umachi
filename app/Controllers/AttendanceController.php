@@ -12,6 +12,7 @@ use App\Models\Attendance;
 use App\Models\LeaveManagement;
 use App\Models\Profile;
 use App\Services\AuthService;
+use App\Services\DashboardLabelService;
 use App\Services\AttendanceDutyPolicyService;
 use App\Services\AttendantHistoryService;
 use App\Services\AttendantDutyService;
@@ -40,6 +41,7 @@ class AttendanceController extends Controller
 
     public function dashboard(): void
     {
+        $dashboardLabel = DashboardLabelService::forCurrentUser();
         $auth = new AuthService();
         $dutyPolicy = new AttendanceDutyPolicyService();
         $isPumpAttendant = array_filter($auth->roles(), [$dutyPolicy, 'requiresManualDuty']) !== [];
@@ -56,8 +58,8 @@ class AttendanceController extends Controller
         $quickActions[] = ['title' => 'Announcements', 'description' => 'Read the latest station notices and updates.', 'route' => 'announcements', 'icon' => 'fa-solid fa-bullhorn'];
 
         $this->renderStaticPage('dashboard', array_merge((new DashboardService())->attendant(), [
-            'pageTitle' => 'Dashboard | FuelOps Staff Dashboard',
-            'pageHeading' => 'Dashboard',
+            'pageTitle' => $dashboardLabel . ' | FuelOps Staff Dashboard',
+            'pageHeading' => $dashboardLabel,
             'pageIntro' => $isPumpAttendant ? 'Review today\'s shift status, assigned pump, and recent station activity.' : 'Record attendance and review recent station announcements.',
             'pageIcon' => 'fa-solid fa-gauge-high',
             'extraStyles' => ['css/clock-in.css', 'css/dashboard.css', 'css/admin-dashboard.css'],

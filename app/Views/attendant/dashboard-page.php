@@ -16,7 +16,7 @@ $announcements = $announcements ?? [];
 $showOperationalSummary = (bool) ($showOperationalSummary ?? false);
 $emptyMessage = $emptyMessage ?? 'No records available yet.';
 $employee = $employee ?? ['name' => 'Station Staff', 'role' => 'Pump Attendant', 'photo' => 'images/sample-passport.svg'];
-$topbarSubtitle = (string) ($employee['role'] ?? 'Staff') . ' Dashboard';
+$topbarSubtitle = \App\Services\DashboardLabelService::forCurrentUser();
 $attendantName = $employee['name'] ?? 'Station Staff';
 $attendantRole = $employee['role'] ?? 'Pump Attendant';
 

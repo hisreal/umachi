@@ -36,7 +36,7 @@ class EmployeeManagementService
         }
 
         $errors = [];
-        $required = ['employee_id', 'first_name', 'last_name', 'gender', 'dob', 'marital_status', 'phone', 'email', 'address', 'emergency_contact_name', 'emergency_contact_phone', 'department', 'role', 'employment_type', 'status', 'date_joined', 'salary', 'allowance', 'bank_name', 'account_name', 'account_number', 'username'];
+        $required = ['employee_id', 'first_name', 'last_name', 'gender', 'dob', 'marital_status', 'phone', 'email', 'address', 'emergency_contact_name', 'emergency_contact_phone', 'department', 'role', 'employment_type', 'status', 'date_joined'];
 
         foreach ($required as $field) {
             if (trim((string) ($data[$field] ?? '')) === '') {
@@ -51,12 +51,6 @@ class EmployeeManagementService
         foreach (['phone', 'emergency_contact_phone'] as $phoneField) {
             if (!preg_match('/^[+0-9][0-9\s-]{7,}$/', (string) ($data[$phoneField] ?? ''))) {
                 $errors[$phoneField] = 'Enter a valid phone number.';
-            }
-        }
-
-        foreach (['salary', 'allowance'] as $moneyField) {
-            if (!is_numeric($data[$moneyField] ?? null) || (float) $data[$moneyField] < 0) {
-                $errors[$moneyField] = 'Enter a valid non-negative amount.';
             }
         }
 
@@ -80,7 +74,7 @@ class EmployeeManagementService
             }
         }
 
-        foreach (['employee_id' => 'employee_code', 'email' => 'email', 'phone' => 'phone', 'username' => 'username'] as $inputField => $databaseField) {
+        foreach (['employee_id' => 'employee_code', 'email' => 'email', 'phone' => 'phone'] as $inputField => $databaseField) {
             if ($this->employees->valueExists($databaseField, (string) ($data[$inputField] ?? ''), $isEdit ? $currentEmployeeCode : null)) {
                 $errors[$inputField] = ucfirst(str_replace('_', ' ', $inputField)) . ' already exists.';
             }
@@ -181,7 +175,22 @@ class EmployeeManagementService
 
     public function update(string $employeeCode, array $data, array $files): void
     {
+        $existing = $this->employees->findForView($employeeCode);
+        if ($existing === null) {
+            throw new RuntimeException('Employee record not found.');
+        }
+
+        unset($data['password'], $data['confirm_password'], $data['company_email'], $data['work_shift']);
+
         $data = $this->validateEmployee($data, true, $employeeCode);
+
+        // The edit form intentionally exposes only personal and employment details.
+        // Always preserve values managed elsewhere, even if extra fields are injected
+        // into the request, so this endpoint cannot change hidden account information.
+        foreach (['supervisor', 'salary', 'allowance', 'bank_name', 'account_name', 'account_number', 'username'] as $field) {
+            $data[$field] = $existing[$field] ?? '';
+        }
+
         $photos = new ProfilePhotoService();
         $oldPhotoPath = $this->employees->photoPathByCode($employeeCode);
         $removePhoto = (string) ($data['remove_photo'] ?? '') === '1';

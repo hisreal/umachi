@@ -15,4 +15,6 @@ $employee = ['name' => $adminUser['name'], 'role' => $adminUser['role']];
 $attendantName = $adminUser['name'];
 $attendantRole = $adminUser['role'];
 
-require __DIR__ . '/company-settings-data.php';
+if (!isset($activityLogs, $activityStats, $activityOptions, $activityFilters, $activityPage)) {
+    require __DIR__ . '/company-settings-data.php';
+}

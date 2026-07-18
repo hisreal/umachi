@@ -142,6 +142,7 @@ class SettingsModel extends BaseModel
 
     public function saveSettings(string $group, array $settings, bool $isPublic = false): void
     {
+        $oldSettings = [];
         foreach ($settings as $key => $value) {
             $type = $this->settingType($value);
             $payload = [
@@ -152,11 +153,25 @@ class SettingsModel extends BaseModel
                 'is_public' => $isPublic ? 1 : 0,
                 'updated_by' => $this->currentUserId(),
             ];
-            $existing = $this->queryOne('SELECT id FROM system_settings WHERE setting_group = :setting_group AND setting_key = :setting_key LIMIT 1', [
+            $existing = $this->queryOne('SELECT id, setting_value, value_type FROM system_settings WHERE setting_group = :setting_group AND setting_key = :setting_key LIMIT 1', [
                 'setting_group' => $group,
                 'setting_key' => (string) $key,
             ]);
+            if ($existing !== null) {
+                $oldSettings[(string) $key] = $this->decodeSetting($existing['setting_value'] ?? null, (string) ($existing['value_type'] ?? 'string'));
+            }
             $existing === null ? $this->insert('system_settings', $payload) : $this->update('system_settings', $payload, ['id' => (int) $existing['id']]);
+        }
+        if ($settings !== []) {
+            $label = ucfirst($group) . ' Settings Updated';
+            $this->logActivity(
+                $label,
+                $label,
+                'Settings',
+                $oldSettings,
+                $settings,
+                'success'
+            );
         }
     }
 

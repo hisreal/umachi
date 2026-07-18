@@ -62,7 +62,7 @@ class AuthService
             return [
                 'success' => true,
                 'redirect' => isset($user['profile_completed']) && !(bool) $user['profile_completed']
-                    ? 'profile/complete'
+                    ? $this->profileCompletionRouteFor($roles, $selectedRole)
                     : (!empty($user['must_change_password'])
                     ? $this->passwordChangeRouteFor($roles, $selectedRole)
                     : $this->redirectFor($roles, $selectedRole)),
@@ -76,6 +76,14 @@ class AuthService
     {
         $sessionId = Session::id();
         $userId = Session::get('auth.user_id');
+
+            (new ActivityLogService($this->database))->record(
+                'Logout',
+                'Authentication',
+                'User signed out successfully.',
+                [],
+                'success'
+            );
 
         if ($userId !== null) {
             try {
@@ -103,7 +111,28 @@ class AuthService
 
     public function profileCompleted(): bool
     {
-        return (bool) Session::get('auth.profile_completed', true);
+        if ((bool) Session::get('auth.profile_completed', true)) {
+            return true;
+        }
+
+        $userId = (int) Session::get('auth.user_id', 0);
+        if ($userId <= 0) {
+            return false;
+        }
+
+        try {
+            $completed = (bool) $this->database->value(
+                'SELECT COALESCE(e.profile_completed, 1) FROM users u LEFT JOIN employees e ON e.id = u.employee_id AND e.deleted_at IS NULL WHERE u.id = :user_id AND u.deleted_at IS NULL LIMIT 1',
+                ['user_id' => $userId]
+            );
+            if ($completed) {
+                Session::put('auth.profile_completed', true);
+            }
+
+            return $completed;
+        } catch (DatabaseException) {
+            return false;
+        }
     }
 
     public function markProfileCompleted(): void
@@ -347,6 +376,17 @@ class AuthService
         return (string) $this->config->get('auth.default_redirect', 'dashboard');
     }
 
+    private function profileCompletionRouteFor(array $roles, string $selectedRole): string
+    {
+        $role = strtolower($selectedRole !== '' ? $selectedRole : ($roles[0] ?? ''));
+
+        if (in_array($role, ['manager', 'supervisor', 'accountant'], true)) {
+            return 'admin/edit-profile';
+        }
+
+        return 'profile/complete';
+    }
+
     private function passwordChangeRouteFor(array $roles, string $selectedRole): string
     {
         $role = strtolower($selectedRole !== '' ? $selectedRole : ($roles[0] ?? ''));
@@ -368,6 +408,21 @@ class AuthService
             'status' => $status,
             'failure_reason' => $reason,
         ]);
+
+        (new ActivityLogService($this->database))->record(
+            $status === 'success' ? 'Login Successful' : 'Login Failed',
+            'Authentication',
+            $status === 'success' ? 'User signed in successfully.' : 'Login attempt failed: ' . ($reason ?? 'Unknown reason'),
+            [
+                'user_id' => $userId,
+                'employee_name' => $username,
+                'notes' => $reason,
+            ],
+            $status,
+            null,
+            ['username' => $username, 'reason' => $reason],
+            $request
+        );
     }
 
     private function failedAttemptCount(string $username, string $ipAddress): int

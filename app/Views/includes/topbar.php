@@ -15,6 +15,6 @@ $topbarSubtitle = $topbarSubtitle ?? 'Pump Attendant Dashboard';
     </div>
     <div class="attendant-topbar__status">
         <i class="fa-solid fa-circle"></i>
-        Prototype Mode
+        Testing Mode
     </div>
 </header>

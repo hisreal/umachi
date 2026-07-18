@@ -14,7 +14,7 @@ $auth = new AuthService($database, $config);
 $admin = $config->get('installation.default_admin', []);
 
 $username = (string) ($admin['username'] ?? 'admin');
-$email = (string) ($admin['email'] ?? 'admin@localhost.com');
+$email = (string) ($admin['email'] ?? 'admin@umachi.com');
 $roleName = (string) ($admin['role'] ?? 'Admin');
 $fullName = (string) ($admin['full_name'] ?? 'System Administrator');
 $defaultPassword = (string) ($admin['password'] ?? 'password1');

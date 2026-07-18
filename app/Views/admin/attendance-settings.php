@@ -18,6 +18,15 @@ $employee = ['name' => $adminUser['name'], 'role' => $adminUser['role']];
 $attendantName = $adminUser['name'];
 $attendantRole = $adminUser['role'];
 require __DIR__ . '/attendance-data.php';
+$attendanceSettingRoles = (new \App\Services\AuthService())->roles();
+$activeAttendanceSettingRole = trim((string) \App\Core\Session::get('auth.role', ''));
+if (in_array(strtolower($activeAttendanceSettingRole), ['manager', 'supervisor', 'accountant'], true)) {
+    $attendanceSettingRoles = [$activeAttendanceSettingRole];
+}
+$canManageAttendanceSettings = (new \App\Services\RbacService())->canAccess(
+    'admin/attendance-settings/update',
+    $attendanceSettingRoles
+);
 require __DIR__ . '/../includes/header.php';
 ?>
 <main class="clock-in-page attendance-module-page">
@@ -42,4 +51,5 @@ require __DIR__ . '/../includes/header.php';
         </form>
     </section>
 </main>
+<?php if (!$canManageAttendanceSettings): ?><script>document.querySelectorAll('#attendanceSettingsForm input, #attendanceSettingsForm select, #attendanceSettingsForm button').forEach(function (control) { control.disabled = true; });</script><?php endif; ?>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

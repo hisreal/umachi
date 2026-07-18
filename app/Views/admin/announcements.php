@@ -17,15 +17,19 @@ $employee = ['name' => 'Administrator', 'role' => 'System Administrator'];
 $attendantName = $employee['name'];
 $attendantRole = $employee['role'];
 require __DIR__ . '/announcement-data.php';
+$announcementRoles = (new \App\Services\AuthService())->roles();
+$activeAnnouncementRole = trim((string) \App\Core\Session::get('auth.role', ''));
+if (in_array(strtolower($activeAnnouncementRole), ['manager', 'supervisor', 'accountant'], true)) {
+    $announcementRoles = [$activeAnnouncementRole];
+}
 $canManageAnnouncements = (new \App\Services\RbacService())->canAccess(
     'admin/announcements/store',
-    (new \App\Services\AuthService())->roles()
+    $announcementRoles
 );
 require __DIR__ . '/../includes/header.php';
 ?>
 <?php if (!$canManageAnnouncements): ?><style>a[href*="add-announcement"],a[href*="edit-announcement"],[data-announcement-action]{display:none!important}</style><?php endif; ?>
 <main class="clock-in-page announcement-page">
-    <section class="clock-hero announcement-hero"><div class="container-fluid"><nav class="announcement-breadcrumb" aria-label="Breadcrumb"><a href="<?php echo e(route_url('admin/dashboard')); ?>">Dashboard</a><i class="fa-solid fa-chevron-right"></i><span>Announcements</span></nav><div class="clock-hero__content announcement-hero-card"><div><span class="eyebrow">Staff Communication</span><h1>Announcement Management</h1><p>Create, publish, schedule, archive, and monitor announcements visible to employees after login.</p></div><a class="btn btn-light" href="<?php echo e(route_url('admin/add-announcement')); ?>"><i class="fa-solid fa-plus"></i>Create Announcement</a></div></div></section>
     <section class="container-fluid clock-workspace"><?php if (!empty($announcementSuccess)): ?><div class="alert alert-success" role="alert"><?php echo e($announcementSuccess); ?></div><?php endif; ?><?php if (!empty($announcementError)): ?><div class="alert alert-danger" role="alert"><?php echo e($announcementError); ?></div><?php endif; ?>
         <div class="announcement-summary-grid"><?php foreach ($summaryCards as $card): ?><article class="announcement-summary-card announcement-summary-card--<?php echo e($card['tone']); ?>"><span><i class="<?php echo e($card['icon']); ?>"></i></span><div><small><?php echo e($card['label']); ?></small><strong><?php echo e((string) $card['value']); ?></strong></div></article><?php endforeach; ?></div>
         <article class="app-card card announcement-table-card mt-4">

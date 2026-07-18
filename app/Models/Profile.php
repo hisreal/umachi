@@ -25,6 +25,7 @@ class Profile extends BaseModel
                     e.id AS employee_db_id, e.employee_code, e.first_name, e.last_name, e.gender, e.date_of_birth, e.phone,
                     e.email AS employee_email, e.address, e.state, e.local_government_area, e.nationality,
                     e.marital_status, e.national_id, e.drivers_license, e.employment_status, e.date_joined, e.salary, e.photo_path,
+                    e.profile_completed, e.profile_completed_at,
                     d.name AS department_name, jt.name AS job_title_name,
                     ec.contact_name AS emergency_contact_name, ec.phone AS emergency_contact_phone
              FROM users u
@@ -44,7 +45,7 @@ class Profile extends BaseModel
         return $this->mapProfile($row);
     }
 
-    public function updateCurrentUser(array $data, array $files): void
+    public function updateCurrentUser(array $data, array $files, bool $markComplete = false): void
     {
         $profile = $this->currentUserProfile();
         if (empty($profile['employee_db_id'])) {
@@ -58,7 +59,7 @@ class Profile extends BaseModel
         $photoPath = $removePhoto ? null : $photos->store($files['passport_photo'] ?? null);
 
         try {
-            $this->transaction(function (Database $database) use ($profile, $payload, $photoPath, $removePhoto): void {
+            $this->transaction(function (Database $database) use ($profile, $payload, $photoPath, $removePhoto, $markComplete): void {
                 $employeeData = [
                     'gender' => $this->enum($payload['gender']),
                     'date_of_birth' => $payload['dob'],
@@ -68,11 +69,17 @@ class Profile extends BaseModel
                     'updated_by' => $this->currentUserId(),
                 ];
 
+                if ($markComplete) {
+                    $employeeData['profile_completed'] = 1;
+                    $employeeData['profile_completed_at'] = $profile['profile_completed_at'] ?: date('Y-m-d H:i:s');
+                }
+
                 if ($removePhoto || $photoPath !== null) {
                     $employeeData['photo_path'] = $photoPath;
                 }
 
                 $database->update('employees', $employeeData, ['id' => (int) $profile['employee_db_id']]);
+                $database->update('users', ['email' => $payload['email']], ['employee_id' => (int) $profile['employee_db_id']]);
                 $this->saveEmergencyContact((int) $profile['employee_db_id'], $payload['emergency_contact'], $payload['emergency_contact_name']);
                 $this->logActivity('Profile Updated', (int) $profile['employee_db_id'], $profile, array_merge($employeeData, ['emergency_contact' => $payload['emergency_contact']]), 'Success');
             });
@@ -83,6 +90,10 @@ class Profile extends BaseModel
 
         if (($removePhoto || $photoPath !== null) && $oldPhotoPath !== $photoPath) {
             $photos->delete($oldPhotoPath);
+        }
+
+        if ($markComplete) {
+            Session::put('auth.profile_completed', true);
         }
 
         $updated = $this->currentUserProfile();
@@ -156,7 +167,7 @@ class Profile extends BaseModel
     private function validateProfileData(array $data, int $employeeId): array
     {
         $phone = trim((string) ($data['phone'] ?? ''));
-        $email = trim((string) ($data['email'] ?? ''));
+        $email = strtolower(trim((string) ($data['email'] ?? '')));
         $address = trim((string) ($data['address'] ?? ''));
         $emergencyContact = trim((string) ($data['emergency_contact'] ?? ''));
         $gender = trim((string) ($data['gender'] ?? ''));
@@ -193,6 +204,14 @@ class Profile extends BaseModel
 
         if ((int) $duplicate > 0) {
             throw new RuntimeException('This email address is already assigned to another employee.');
+        }
+
+        $duplicateLogin = $this->database()->value(
+            'SELECT COUNT(*) FROM users WHERE LOWER(email) = LOWER(:email) AND (employee_id IS NULL OR employee_id <> :employee_id) AND deleted_at IS NULL',
+            ['email' => $email, 'employee_id' => $employeeId]
+        );
+        if ((int) $duplicateLogin > 0) {
+            throw new RuntimeException('This email address is already assigned to another login account.');
         }
 
         return [
@@ -247,6 +266,8 @@ class Profile extends BaseModel
             'employee_db_id' => isset($row['employee_db_id']) ? (int) $row['employee_db_id'] : null,
             'employee_id' => (string) ($row['employee_code'] ?? 'N/A'),
             'name' => $name,
+            'profile_completed' => (bool) ($row['profile_completed'] ?? false),
+            'profile_completed_at' => (string) ($row['profile_completed_at'] ?? ''),
             'gender' => $this->label($row['gender'] ?? ''),
             'dob' => $dob,
             'dob_raw' => (string) ($row['date_of_birth'] ?? ''),
