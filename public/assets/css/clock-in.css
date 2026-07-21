@@ -272,15 +272,20 @@
     padding-inline: 1rem;
   }
 
-  .attendant-topbar__status {
+  .topbar-quick-actions {
     margin-left: auto;
   }
 }
 
 @media (max-width: 575.98px) {
-  .attendant-topbar__status {
-    display: none;
+  .topbar-quick-actions { gap: 0.35rem; }
+  .topbar-quick-actions .topbar-external-action {
+    display: inline-flex;
+    min-width: 2.35rem;
+    justify-content: center;
+    padding-inline: 0.65rem;
   }
+  .topbar-action-label { display: none; }
 }
 /* Clock-in page design tokens and layout */
 :root {
@@ -775,3 +780,48 @@ body {
   color: var(--clock-muted);
   font-weight: 700;
 }
+.topbar-quick-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.topbar-external-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.45rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.topbar-external-action--gmail {
+  border-color: rgba(220, 38, 38, 0.2);
+  color: #b91c1c;
+  background: #fff1f2;
+}
+
+.topbar-external-action--webmail {
+  border-color: rgba(37, 99, 235, 0.2);
+  color: #1d4ed8;
+  background: #eff6ff;
+}
+
+.topbar-external-action:hover,
+.topbar-external-action:focus-visible {
+  color: inherit;
+  box-shadow: 0 7px 18px rgba(15, 23, 42, 0.14);
+  transform: translateY(-1px);
+  filter: brightness(0.98);
+}
+
+.topbar-external-action i { font-size: 0.9rem; }

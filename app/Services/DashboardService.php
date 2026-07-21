@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\Database;
+use App\Core\Config;
 use App\Core\Session;
 use App\Core\Request;
 use App\Models\Announcement;
@@ -70,6 +71,7 @@ final class DashboardService
         return [
             'adminUser' => $this->sessionUser(),
             'dashboardSections' => $sections,
+            'administratorQuickLinks' => $isAdministrator ? $this->administratorQuickLinks() : [],
             'dashboardQuickActionRoutes' => match ($normalizedRole) {
                 'manager' => ['admin/duty-roster', 'admin/verify-sales', 'admin/leave-requests', 'admin/fuel-inventory', 'admin/fuel-sales-report'],
                 'supervisor' => ['admin/duty-roster', 'admin/leave-requests'],
@@ -89,6 +91,36 @@ final class DashboardService
             'chartData' => $this->adminCharts($sections),
         ];
     }
+    private function administratorQuickLinks(): array
+    {
+        $configPath = defined('CONFIG_PATH') ? CONFIG_PATH : dirname(__DIR__, 2) . '/config';
+        $links = (new Config($configPath))->get('app.administrator_quick_links', []);
+        if (!is_array($links)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(static function (mixed $link): ?array {
+            if (!is_array($link)) {
+                return null;
+            }
+            $url = trim((string) ($link['url'] ?? ''));
+            $scheme = strtolower((string) parse_url($url, PHP_URL_SCHEME));
+            if (filter_var($url, FILTER_VALIDATE_URL) === false || !in_array($scheme, ['http', 'https'], true)) {
+                return null;
+            }
+
+            $variant = strtolower(trim((string) ($link['variant'] ?? 'default')));
+            $variant = in_array($variant, ['gmail', 'webmail'], true) ? $variant : 'default';
+            return [
+                'label' => trim((string) ($link['label'] ?? '')),
+                'url' => $url,
+                'icon' => trim((string) ($link['icon'] ?? 'fa-solid fa-arrow-up-right-from-square')),
+                'tooltip' => trim((string) ($link['tooltip'] ?? 'Open external service')),
+                'variant' => $variant,
+            ];
+        }, $links)));
+    }
+
 
     public function attendant(): array
     {
