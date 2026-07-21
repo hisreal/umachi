@@ -97,6 +97,15 @@ class Attendance extends BaseModel
                 $bindings[$key] = (string) $filters[$key];
             }
         }
+        if (trim((string) ($filters['employee'] ?? '')) !== '') {
+            $where[] = "CONCAT(e.first_name, ' ', e.last_name) = :employee";
+            $bindings['employee'] = (string) $filters['employee'];
+        }
+        if (trim((string) ($filters['shift'] ?? '')) !== '') {
+            $where[] = 's.name = :shift';
+            $bindings['shift'] = (string) $filters['shift'];
+        }
+
         if (trim((string) ($filters['date'] ?? '')) !== '') {
             $where[] = 'a.attendance_date = :date';
             $bindings['date'] = (string) $filters['date'];
@@ -109,6 +118,95 @@ class Attendance extends BaseModel
 
         $rows = $this->query($this->attendanceSelectSql('WHERE ' . implode(' AND ', $where) . ' ORDER BY a.attendance_date DESC, a.id DESC LIMIT 200'), $bindings);
         return array_map([$this, 'mapAttendanceRow'], $rows);
+    }
+
+    public function adminSettings(): array
+    {
+        $this->boot();
+        $row = $this->queryOne('SELECT * FROM attendance_settings WHERE shift_id IS NULL ORDER BY id DESC LIMIT 1');
+        if ($row === null) {
+            return [
+                'clock_in' => '06:00', 'clock_out' => '14:00', 'grace_period' => 0,
+                'late_threshold' => 1, 'overtime_start' => '14:00', 'max_overtime' => 4,
+                'shift_duration' => '8 Hours', 'auto_clock_out' => false, 'photo_required' => true,
+                'face_verification' => false, 'gps_verification' => false, 'early_clock_in' => true,
+                'manual_adjustment' => true, 'approval_required' => 'Supervisor',
+            ];
+        }
+        $start = strtotime('1970-01-01 ' . (string) $row['clock_in_time']);
+        $end = strtotime('1970-01-01 ' . (string) $row['clock_out_time']);
+        if ($end <= $start) $end += 86400;
+        $shiftDuration = (int) round(($end - $start) / 3600) . ' Hours';
+        return [
+            'clock_in' => substr((string) $row['clock_in_time'], 0, 5),
+            'clock_out' => substr((string) $row['clock_out_time'], 0, 5),
+            'grace_period' => (int) $row['grace_period_minutes'],
+            'late_threshold' => (int) $row['late_threshold_minutes'],
+            'overtime_start' => substr((string) ($row['overtime_start_time'] ?? ''), 0, 5),
+            'max_overtime' => (float) $row['max_overtime_hours'],
+            'shift_duration' => $shiftDuration,
+            'auto_clock_out' => (bool) $row['auto_clock_out'],
+            'photo_required' => (bool) $row['photo_required'],
+            'face_verification' => (bool) $row['face_verification_required'],
+            'gps_verification' => (bool) $row['gps_verification_required'],
+            'early_clock_in' => (bool) $row['early_clock_in_allowed'],
+            'manual_adjustment' => (bool) $row['manual_adjustment_allowed'],
+            'approval_required' => (string) ($row['approval_required_role'] ?: 'No Approval'),
+        ];
+    }
+
+    public function saveAdminSettings(array $data): void
+    {
+        $errors = [];
+        foreach (['grace_period', 'late_threshold', 'max_overtime'] as $field) {
+            if (!is_numeric($data[$field] ?? null) || (float) $data[$field] < 0) $errors[$field] = 'Enter a valid non-negative number.';
+        }
+        if (!in_array((string) ($data['shift_duration'] ?? ''), ['8 Hours', '10 Hours', '12 Hours'], true)) $errors['shift_duration'] = 'Select a valid shift duration.';
+        if (!in_array((string) ($data['approval_required'] ?? ''), ['No Approval', 'Supervisor', 'Manager', 'Admin'], true)) $errors['approval_required'] = 'Select a valid approval role.';
+        if ($errors !== []) throw new \App\Core\ValidationException('Please correct the highlighted attendance settings.', $errors);
+
+        $hours = (int) $data['shift_duration'];
+        $clockIn = '06:00:00';
+        $clockOut = date('H:i:s', strtotime($clockIn . " +{$hours} hours"));
+        $values = [
+            'shift_id' => null,
+            'clock_in_time' => $clockIn,
+            'clock_out_time' => $clockOut,
+            'grace_period_minutes' => (int) $data['grace_period'],
+            'late_threshold_minutes' => (int) $data['late_threshold'],
+            'overtime_start_time' => $clockOut,
+            'max_overtime_hours' => (float) $data['max_overtime'],
+            'auto_clock_out' => isset($data['auto_clock_out']) ? 1 : 0,
+            'photo_required' => isset($data['photo_required']) ? 1 : 0,
+            'face_verification_required' => isset($data['face_verification']) ? 1 : 0,
+            'gps_verification_required' => isset($data['gps_verification']) ? 1 : 0,
+            'early_clock_in_allowed' => isset($data['early_clock_in']) ? 1 : 0,
+            'manual_adjustment_allowed' => isset($data['manual_adjustment']) ? 1 : 0,
+            'approval_required_role' => $data['approval_required'] === 'No Approval' ? null : $data['approval_required'],
+        ];
+        $existing = $this->queryOne('SELECT id FROM attendance_settings WHERE shift_id IS NULL ORDER BY id DESC LIMIT 1');
+        $existing === null ? $this->insert('attendance_settings', $values) : $this->update('attendance_settings', $values, ['id' => (int) $existing['id']]);
+    }
+
+    public function adjustAttendance(array $data): void
+    {
+        $id = (int) ($data['attendance_id'] ?? 0);
+        $record = $this->queryOne('SELECT * FROM attendance WHERE id = :id LIMIT 1', ['id' => $id]);
+        $errors = [];
+        if ($record === null) $errors['attendance_id'] = 'Attendance record was not found.';
+        if (trim((string) ($data['reason'] ?? '')) === '') $errors['reason'] = 'Adjustment reason is required.';
+        foreach (['clock_in', 'clock_out'] as $field) {
+            if (!empty($data[$field]) && strtotime((string) $data[$field]) === false) $errors[$field] = 'Enter a valid date and time.';
+        }
+        if (!in_array((string) ($data['status'] ?? ''), ['Present', 'Late', 'Absent', 'Half Day', 'On Leave'], true)) $errors['status'] = 'Select a valid attendance status.';
+        if ($errors !== []) throw new \App\Core\ValidationException('Please correct the attendance adjustment.', $errors);
+
+        $newClockIn = $data['clock_in'] !== '' ? date('Y-m-d H:i:s', strtotime((string) $data['clock_in'])) : null;
+        $newClockOut = $data['clock_out'] !== '' ? date('Y-m-d H:i:s', strtotime((string) $data['clock_out'])) : null;
+        $this->transaction(function () use ($id, $record, $data, $newClockIn, $newClockOut): void {
+            $this->insert('attendance_adjustments', ['attendance_id' => $id, 'requested_by' => Session::get('auth.user_id'), 'approved_by' => Session::get('auth.user_id'), 'old_clock_in_at' => $record['clock_in'], 'old_clock_out_at' => $record['clock_out'], 'new_clock_in_at' => $newClockIn, 'new_clock_out_at' => $newClockOut, 'reason' => trim((string) $data['reason']), 'status' => 'approved']);
+            $this->update('attendance', ['clock_in' => $newClockIn, 'clock_out' => $newClockOut, 'attendance_status' => $data['status'], 'remarks' => trim((string) ($data['remarks'] ?? ''))], ['id' => $id]);
+        });
     }
 
     public function attendanceDetails(int $recordId): ?array
@@ -137,6 +235,8 @@ class Attendance extends BaseModel
             'shift' => (string) ($row['shift_name'] ?? 'Unassigned'),
             'status' => (string) $row['attendance_status'],
             'clock_in_time' => empty($row['clock_in']) ? 'Not recorded' : date('h:i A', strtotime((string) $row['clock_in'])),
+            'clock_in_value' => empty($row['clock_in']) ? '' : date('Y-m-d\TH:i', strtotime((string) $row['clock_in'])),
+            'clock_out_value' => empty($row['clock_out']) ? '' : date('Y-m-d\TH:i', strtotime((string) $row['clock_out'])),
             'clock_out_time' => empty($row['clock_out']) ? 'Not recorded' : date('h:i A', strtotime((string) $row['clock_out'])),
             'clock_in_selfie_status' => $this->attendancePhotoStatus($row['clock_in_photo'] ?? null, 'clock-in'),
             'clock_out_selfie_status' => $this->attendancePhotoStatus($row['clock_out_photo'] ?? null, 'clock-out'),

@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 namespace App\Services;
+use App\Core\ValidationException;
 
 use App\Models\Employee;
 use RuntimeException;
@@ -18,10 +19,11 @@ class EmployeeManagementService
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
     ];
 
-    public function __construct(private ?Employee $employees = null, private ?ProfilePhotoService $photos = null)
+    public function __construct(private ?Employee $employees = null, private ?ProfilePhotoService $photos = null, private ?MailService $mail = null)
     {
         $this->employees ??= new Employee();
         $this->photos ??= new ProfilePhotoService();
+        $this->mail ??= new MailService();
     }
 
     public function model(): Employee
@@ -81,7 +83,7 @@ class EmployeeManagementService
         }
 
         if ($errors !== []) {
-            throw new RuntimeException(implode(' ', array_values($errors)));
+            throw new ValidationException('Please correct the highlighted employee fields.', $errors);
         }
 
         return $data;
@@ -145,11 +147,13 @@ class EmployeeManagementService
         if ($this->employees->valueExists('email', (string) ($data['personal_email'] ?? ''))) {
             $errors['personal_email'] = 'Personal email address already exists.';
         }
-        if ($this->employees->valueExists('company_email', (string) ($data['company_email'] ?? ''))) {
+        $companyEmail = strtolower(trim((string) ($data['company_email'] ?? '')));
+        if ($this->employees->valueExists('company_email', $companyEmail)
+            || $this->employees->valueExists('username', $companyEmail)) {
             $errors['company_email'] = 'Company email address already exists.';
         }
         if ($errors !== []) {
-            throw new RuntimeException(implode(' ', array_values(array_unique($errors))));
+            throw new ValidationException('Please correct the highlighted employee fields.', $errors);
         }
 
         $data['email'] = strtolower(trim((string) $data['personal_email']));
@@ -158,19 +162,55 @@ class EmployeeManagementService
         return $data;
     }
 
-    public function store(array $data, array $files, array $context = []): int
+    public function store(array $data, array $files, array $context = []): array
     {
         $data = $this->validateEmployee($data);
         $photos = new ProfilePhotoService();
-        $data['photo_path'] = $photos->store($files['passport_photo'] ?? null);
+        try {
+            $data['photo_path'] = $photos->store($files['passport_photo'] ?? null);
+        } catch (RuntimeException $exception) {
+            throw new ValidationException('Please correct the passport upload.', ['passport_photo' => $exception->getMessage()]);
+        }
 
         try {
             $data['_context'] = $context;
-            return $this->employees->create($data);
+            $employeeId = $this->employees->create($data);
         } catch (\Throwable $exception) {
             $photos->delete($data['photo_path']);
             throw $exception;
         }
+
+        $employeeCode = $this->employees->employeeCodeById($employeeId);
+        $employeeName = trim((string) $data['first_name'] . ' ' . (string) $data['last_name']);
+        $subject = 'Welcome to ' . (string) $this->mail->setting('company_name', 'FuelOps') . ' - Your Employee Account Has Been Created';
+        $mailSent = false;
+        $mailError = null;
+        try {
+            $loginUrl = trim((string) $this->mail->setting('login_url', ''));
+            $this->mail->sendTemplate((string) $data['email'], $employeeName, $subject, 'employee-welcome', [
+                'employeeName' => $employeeName,
+                'employeeId' => $employeeCode,
+                'companyEmail' => (string) $data['company_email'],
+                'password' => (string) $data['password'],
+                'department' => (string) $data['department'],
+                'role' => (string) $data['role'],
+                'dateJoined' => date('F j, Y', strtotime((string) $data['date_joined'])),
+                'loginUrl' => $loginUrl !== '' ? $loginUrl : route_url('login'),
+                'companyLogo' => (string) $this->mail->setting('company_logo', ''),
+                'companyName' => (string) $this->mail->setting('company_name', 'FuelOps'),
+                'companyAddress' => (string) $this->mail->setting('company_address', ''),
+                'companyPhone' => (string) $this->mail->setting('company_phone', ''),
+                'companyContactEmail' => (string) $this->mail->setting('company_email', ''),
+                'emailSubject' => $subject,
+            ]);
+            $mailSent = true;
+        } catch (Throwable $exception) {
+            $mailError = $exception->getMessage();
+            error_log('Welcome email failed for ' . $employeeCode . ': ' . $mailError);
+        }
+        $this->employees->recordWelcomeEmailStatus($employeeId, $employeeCode, $mailSent, $mailError, $context);
+
+        return ['employee_id' => $employeeId, 'employee_code' => $employeeCode, 'mail_sent' => $mailSent];
     }
 
     public function update(string $employeeCode, array $data, array $files): void
@@ -194,7 +234,11 @@ class EmployeeManagementService
         $photos = new ProfilePhotoService();
         $oldPhotoPath = $this->employees->photoPathByCode($employeeCode);
         $removePhoto = (string) ($data['remove_photo'] ?? '') === '1';
-        $photoPath = $removePhoto ? null : $photos->store($files['passport_photo'] ?? null);
+        try {
+            $photoPath = $removePhoto ? null : $photos->store($files['passport_photo'] ?? null);
+        } catch (RuntimeException $exception) {
+            throw new ValidationException('Please correct the passport upload.', ['passport_photo' => $exception->getMessage()]);
+        }
 
         if ($removePhoto || $photoPath !== null) {
             $data['photo_path'] = $photoPath;
@@ -218,15 +262,19 @@ class EmployeeManagementService
     {
         foreach (['document_type', 'document_title'] as $field) {
             if (trim((string) ($data[$field] ?? '')) === '') {
-                throw new RuntimeException('Document type and title are required.');
+                throw new ValidationException('Please complete the document details.', [$field => 'This field is required.']);
             }
         }
 
         if (!empty($data['expires_on']) && !$this->isValidDate((string) $data['expires_on'])) {
-            throw new RuntimeException('Enter a valid document expiry date.');
+            throw new ValidationException('Please correct the document expiry date.', ['expires_on' => 'Enter a valid document expiry date.']);
         }
 
-        $path = $this->handleUpload($files['employee_document'] ?? null, 'employees/documents', self::DOCUMENT_TYPES, true);
+        try {
+            $path = $this->handleUpload($files['employee_document'] ?? null, 'employees/documents', self::DOCUMENT_TYPES, true);
+        } catch (RuntimeException $exception) {
+            throw new ValidationException('Please correct the document upload.', ['employee_document' => $exception->getMessage()]);
+        }
         $this->employees->uploadDocument($employeeCode, $data, (string) $path);
     }
 

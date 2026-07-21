@@ -66,4 +66,21 @@ class Request
     {
         return $this->method() === 'POST';
     }
+    public function header(string $name, string $default = ''): string
+    {
+        $key = 'HTTP_' . strtoupper(str_replace('-', '_', $name));
+        return (string) ($this->server[$key] ?? $default);
+    }
+
+    public function expectsJson(): bool
+    {
+        return strtolower($this->header('X-Requested-With')) === 'xmlhttprequest'
+            || str_contains(strtolower($this->header('Accept')), 'application/json');
+    }
+    public function csrfToken(): string
+    {
+        return (string) $this->post('_csrf_token', $this->header('X-CSRF-TOKEN'));
+    }
+
+
 }

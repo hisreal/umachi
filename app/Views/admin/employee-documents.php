@@ -47,7 +47,7 @@ require __DIR__ . '/../includes/header.php';
         <div class="employee-summary-grid"><?php foreach ($documentStats as $stat): ?><article class="employee-summary-card employee-summary-card--<?php echo e($stat['tone']); ?>"><span><i class="<?php echo e($stat['icon']); ?>"></i></span><div><small><?php echo e($stat['label']); ?></small><strong><?php echo e((string) $stat['value']); ?></strong></div></article><?php endforeach; ?></div>
         <article class="app-card card employee-list-card mt-4">
             <div class="employee-toolbar"><div><span class="eyebrow">Document Files</span><h2>Document Management</h2></div></div>
-            <form class="employee-filter-grid employee-filter-grid--documents" method="post" action="<?php echo e(route_url('admin/employees/upload-document')); ?>" enctype="multipart/form-data">
+            <form class="employee-filter-grid employee-filter-grid--documents" method="post" action="<?php echo e(route_url('admin/employees/upload-document')); ?>" enctype="multipart/form-data" data-employee-document-upload novalidate>
                 <input type="hidden" name="_csrf_token" value="<?php echo e($employeeCsrf); ?>">
                 <input type="hidden" name="employee" value="<?php echo e($selectedEmployee['id']); ?>">
                 <select class="form-select" name="document_type" required><option value="">Select document type</option><?php foreach ($documentTypes as $documentType): ?><option value="<?php echo e($documentType); ?>"><?php echo e($documentType); ?></option><?php endforeach; ?></select>

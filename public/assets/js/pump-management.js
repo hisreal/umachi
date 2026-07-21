@@ -27,6 +27,23 @@
         return result.isConfirmed;
     };
 
+    const submitMutation = async (button) => {
+        const form = button.closest('form');
+        if (!form || !window.FuelOpsAjax) {
+            form?.submit();
+            return null;
+        }
+        return window.FuelOpsAjax.submitForm(form, {
+            button,
+            redirect: false,
+            notify: false,
+            refresh: ['.pump-summary-grid', '.pump-table-card']
+        }).then((payload) => {
+            window.FuelOpsAjax.notify('success', payload.message);
+            return payload;
+        }).catch(() => null);
+    };
+
     document.addEventListener('click', async (event) => {
         const actionButton = event.target.closest('[data-pump-action]');
         if (!actionButton) { return; }
@@ -54,7 +71,7 @@
         if (action === 'delete') {
             event.preventDefault();
             if (await confirmAction('Delete Pump', `${pump} will be soft deleted and hidden from normal listings.`)) {
-                actionButton.closest('form')?.submit();
+                await submitMutation(actionButton);
             }
             return;
         }
@@ -62,7 +79,7 @@
         if (action === 'toggle') {
             event.preventDefault();
             if (await confirmAction('Update Pump Status', `${pump} status will be changed.`)) {
-                actionButton.closest('form')?.submit();
+                await submitMutation(actionButton);
             }
         }
     });

@@ -184,6 +184,32 @@ class Employee extends BaseModel
             return $employeeId;
         });
     }
+    public function employeeCodeById(int $employeeId): string
+    {
+        $code = $this->database()->value('SELECT employee_code FROM employees WHERE id = :id AND deleted_at IS NULL LIMIT 1', ['id' => $employeeId]);
+        if ($code === null || trim((string) $code) === '') {
+            throw new RuntimeException('The generated employee ID could not be retrieved.');
+        }
+        return (string) $code;
+    }
+
+    public function recordWelcomeEmailStatus(int $employeeId, string $employeeCode, bool $sent, ?string $error, array $context = []): void
+    {
+        $this->logActivity(
+            $sent ? 'Welcome Email Sent' : 'Welcome Email Failed',
+            $employeeId,
+            null,
+            [
+                'employee_id' => $employeeCode,
+                'user_id' => $this->currentUserId(),
+                'timestamp' => date('Y-m-d H:i:s'),
+                'error_message' => $sent ? null : substr((string) $error, 0, 1000),
+            ],
+            $sent ? 'success' : 'warning',
+            $context
+        );
+    }
+
 
     public function updateByCode(string $employeeCode, array $data): void
     {
@@ -549,6 +575,7 @@ class Employee extends BaseModel
             'is_deleted' => !empty($row['deleted_at']),
             'account_status' => (string) ($row['account_status'] ?? ''),
             'date_joined' => (string) ($row['date_joined'] ?? ''),
+            'service_duration' => \App\Services\ServiceDurationFormatter::format((string) ($row['date_joined'] ?? '')),
             'supervisor' => (string) ($row['supervisor_name'] ?? ''),
             'shift' => 'Rotational',
             'salary' => (float) $row['salary'],

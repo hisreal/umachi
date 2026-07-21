@@ -14,6 +14,7 @@ $extraStyles = $extraStyles ?? [];
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Filling station staff and activity management dashboard.">
+    <meta name="csrf-token" content="<?php echo e(csrf_token()); ?>">
     <title><?php echo e($pageTitle); ?></title>
 
     <link rel="shortcut icon" href="<?php echo e(asset_url('images/favicon.png')); ?>">

@@ -19,7 +19,7 @@ require __DIR__ . '/../includes/header.php';
                         <div class="approval-option-grid">
                             <?php foreach ($approvalWorkflows as $key => $workflow): ?>
                                 <label class="approval-option">
-                                    <input type="radio" name="approvalWorkflow" value="<?php echo e($key); ?>" <?php echo $key === 'multi_level' ? 'checked' : ''; ?>>
+                                    <input type="radio" name="approvalWorkflow" value="<?php echo e($key); ?>" <?php echo $key === $activeApprovalWorkflow ? 'checked' : ''; ?>>
                                     <span><strong><?php echo e($workflow['label']); ?></strong><small><?php echo e(implode(' -> ', $workflow['steps'])); ?></small></span>
                                 </label>
                             <?php endforeach; ?>
@@ -30,13 +30,13 @@ require __DIR__ . '/../includes/header.php';
                     <article class="app-card card leave-form-card h-100">
                         <div class="leave-section-heading"><span><i class="fa-solid fa-sliders"></i></span><div><small>Additional Settings</small><h2>Policy Controls</h2></div></div>
                         <div class="leave-settings-grid">
-                            <div class="form-check form-switch leave-switch"><input class="form-check-input" type="checkbox" id="allowCancellation" name="allow_cancellation" value="1" checked><label class="form-check-label" for="allowCancellation">Allow Leave Cancellation</label></div>
-                            <div class="form-check form-switch leave-switch"><input class="form-check-input" type="checkbox" id="requireDocuments" name="require_documents" value="1" checked><label class="form-check-label" for="requireDocuments">Require Supporting Documents</label></div>
-                            <div class="form-check form-switch leave-switch"><input class="form-check-input" type="checkbox" id="notifyApprovers" name="notify_approvers" value="1" checked><label class="form-check-label" for="notifyApprovers">Notify Approvers</label></div>
-                            <div class="form-check form-switch leave-switch"><input class="form-check-input" type="checkbox" id="autoApproveEmergency" name="auto_approve_emergency" value="1"><label class="form-check-label" for="autoApproveEmergency">Auto Approve Emergency Leave</label></div>
-                            <div class="form-check form-switch leave-switch"><input class="form-check-input" type="checkbox" id="allowHalfDay" name="allow_half_day" value="1" checked><label class="form-check-label" for="allowHalfDay">Allow Half-Day Leave</label></div>
-                            <div><label class="form-label" for="maxRequests">Maximum Leave Requests Per Year</label><input class="form-control" id="maxRequests" name="max_requests_per_year" type="number" min="1" value="12" required></div>
-                            <div><label class="form-label" for="approvalDeadline">Approval Deadline (Hours)</label><input class="form-control" id="approvalDeadline" name="approval_deadline_hours" type="number" min="1" value="48" required></div>
+                            <div class="form-check form-switch leave-switch"><input class="form-check-input" type="checkbox" id="allowCancellation" name="allow_cancellation" value="1" <?php echo $leavePolicySettings['allow_cancellation'] ? 'checked' : ''; ?>><label class="form-check-label" for="allowCancellation">Allow Leave Cancellation</label></div>
+                            <div class="form-check form-switch leave-switch"><input class="form-check-input" type="checkbox" id="requireDocuments" name="require_documents" value="1" <?php echo $leavePolicySettings['require_documents'] ? 'checked' : ''; ?>><label class="form-check-label" for="requireDocuments">Require Supporting Documents</label></div>
+                            <div class="form-check form-switch leave-switch"><input class="form-check-input" type="checkbox" id="notifyApprovers" name="notify_approvers" value="1" <?php echo $leavePolicySettings['notify_approvers'] ? 'checked' : ''; ?>><label class="form-check-label" for="notifyApprovers">Notify Approvers</label></div>
+                            <div class="form-check form-switch leave-switch"><input class="form-check-input" type="checkbox" id="autoApproveEmergency" name="auto_approve_emergency" value="1" <?php echo $leavePolicySettings['auto_approve_emergency'] ? 'checked' : ''; ?>><label class="form-check-label" for="autoApproveEmergency">Auto Approve Emergency Leave</label></div>
+                            <div class="form-check form-switch leave-switch"><input class="form-check-input" type="checkbox" id="allowHalfDay" name="allow_half_day" value="1" <?php echo $leavePolicySettings['allow_half_day'] ? 'checked' : ''; ?>><label class="form-check-label" for="allowHalfDay">Allow Half-Day Leave</label></div>
+                            <div><label class="form-label" for="maxRequests">Maximum Leave Requests Per Year</label><input class="form-control" id="maxRequests" name="max_requests_per_year" type="number" min="1" value="<?php echo e((string)$leavePolicySettings['max_requests_per_year']); ?>" required></div>
+                            <div><label class="form-label" for="approvalDeadline">Approval Deadline (Hours)</label><input class="form-control" id="approvalDeadline" name="approval_deadline_hours" type="number" min="1" value="<?php echo e((string)$leavePolicySettings['approval_deadline_hours']); ?>" required></div>
                         </div>
                     </article>
                 </div>

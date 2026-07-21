@@ -85,20 +85,14 @@ class AdminController extends Controller
     {
         $request = Request::capture();
         if (!$this->canViewAttendanceSelfies()) {
-            http_response_code(403);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['success' => false, 'message' => 'You do not have permission to view attendance selfies.']);
-            return;
+            (new Response())->error('You do not have permission to view attendance selfies.', [], 403);
         }
 
         $recordId = (int) $request->query('id', 0);
         try {
             $details = (new Attendance())->attendanceDetails($recordId);
             if ($details === null) {
-                http_response_code(404);
-                header('Content-Type: application/json; charset=utf-8');
-                echo json_encode(['success' => false, 'message' => 'Attendance record not found.']);
-                return;
+                (new Response())->error('Attendance record not found.', [], 404);
             }
 
             $imageRoute = route_url('admin/attendance-history/selfie') . '&id=' . $recordId . '&type=';
@@ -125,14 +119,10 @@ class AdminController extends Controller
             );
 
             unset($details['employee_db_id']);
-            header('Content-Type: application/json; charset=utf-8');
-            header('Cache-Control: private, no-store');
-            echo json_encode(['success' => true, 'record' => $details], JSON_THROW_ON_ERROR);
+            (new Response())->success('Attendance details loaded.', ['record' => $details]);
         } catch (\Throwable $exception) {
             error_log('[Attendance Selfie Details] ' . $exception->getMessage());
-            http_response_code(500);
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['success' => false, 'message' => 'Attendance details could not be loaded.']);
+            (new Response())->error('Attendance details could not be loaded.', [], 500);
         }
     }
 
@@ -168,6 +158,26 @@ class AdminController extends Controller
             header('Content-Type: text/plain; charset=utf-8');
             echo 'Image not available.';
         }
+    }
+
+    public function saveAttendanceSettings(): void
+    {
+        $request = Request::capture();
+        $url = route_url('admin/attendance-settings');
+        $this->mutationResponse($request, static function () use ($request): array {
+            (new Attendance())->saveAdminSettings($request->all());
+            return ['_redirect' => route_url('admin/attendance-settings')];
+        }, 'Attendance settings saved successfully.', $url, $url, 'attendance_error');
+    }
+
+    public function adjustAttendance(): void
+    {
+        $request = Request::capture();
+        $url = route_url('admin/attendance-history');
+        $this->mutationResponse($request, static function () use ($request): array {
+            (new Attendance())->adjustAttendance($request->all());
+            return ['attendance_id' => (int) $request->post('attendance_id', 0), '_redirect' => route_url('admin/attendance-history')];
+        }, 'Attendance adjustment saved successfully.', $url, $url, 'attendance_error');
     }
 
     private function canViewAttendanceSelfies(): bool
@@ -298,80 +308,71 @@ class AdminController extends Controller
 
     public function storeEmployee(): void
     {
-        $this->handleEmployeeMutation(static function (EmployeeManagementService $service, Request $request): string {
-            $service->store($request->all(), $_FILES, self::requestContext($request));
-            Session::flash('employee_success', 'Employee created successfully.');
-
-            return route_url('admin/employees');
-        }, route_url('admin/add-employee'));
+        $this->handleEmployeeMutation(static function (EmployeeManagementService $service, Request $request): array {
+            $result = $service->store($request->all(), $_FILES, self::requestContext($request));
+            $result['_message'] = !empty($result['mail_sent'])
+                ? 'Employee created successfully and welcome email sent successfully.'
+                : 'Employee created successfully, but the welcome email could not be sent.';
+            $result['_redirect'] = route_url('admin/employees');
+            $result['_notification'] = !empty($result['mail_sent']) ? 'success' : 'warning';
+            return $result;
+        }, route_url('admin/add-employee'), 'Employee created successfully.');
     }
 
     public function updateEmployee(): void
     {
         $employeeCode = (string) Request::capture()->input('employee', '');
-        $this->handleEmployeeMutation(static function (EmployeeManagementService $service, Request $request) use ($employeeCode): string {
+        $this->handleEmployeeMutation(static function (EmployeeManagementService $service, Request $request) use ($employeeCode): array {
             $service->update($employeeCode, $request->all(), $_FILES);
-            Session::flash('employee_success', 'Employee updated successfully.');
-
-            return route_url('admin/employee-profile') . '&employee=' . urlencode((string) $request->post('employee_id', $employeeCode));
-        }, route_url('admin/edit-employee') . '&employee=' . urlencode($employeeCode));
+            $updatedCode = (string) $request->post('employee_id', $employeeCode);
+            return ['employee' => $updatedCode, '_redirect' => route_url('admin/employee-profile') . '&employee=' . urlencode($updatedCode)];
+        }, route_url('admin/edit-employee') . '&employee=' . urlencode($employeeCode), 'Employee updated successfully.');
     }
 
     public function deleteEmployee(): void
     {
         $employeeCode = (string) Request::capture()->post('employee', '');
-        $this->handleEmployeeMutation(static function (EmployeeManagementService $service) use ($employeeCode): string {
+        $this->handleEmployeeMutation(static function (EmployeeManagementService $service) use ($employeeCode): array {
             $service->model()->deleteByCode($employeeCode);
-            Session::flash('employee_success', 'Employee deleted successfully.');
-
-            return route_url('admin/employees');
-        }, route_url('admin/employees'));
+            return ['employee' => $employeeCode, '_redirect' => route_url('admin/employees')];
+        }, route_url('admin/employees'), 'Employee deleted successfully.');
     }
 
     public function toggleEmployeeAccount(): void
     {
         $employeeCode = (string) Request::capture()->post('employee', '');
-        $this->handleEmployeeMutation(static function (EmployeeManagementService $service) use ($employeeCode): string {
+        $this->handleEmployeeMutation(static function (EmployeeManagementService $service) use ($employeeCode): array {
             $service->model()->toggleAccount($employeeCode);
-            Session::flash('employee_success', 'Employee account status updated successfully.');
-
-            return route_url('admin/employees');
-        }, route_url('admin/employees'));
+            return ['employee' => $employeeCode, '_redirect' => route_url('admin/employees')];
+        }, route_url('admin/employees'), 'Employee account status updated successfully.');
     }
 
     public function resetEmployeePassword(): void
     {
         $employeeCode = (string) Request::capture()->post('employee', '');
-        $this->handleEmployeeMutation(static function (EmployeeManagementService $service) use ($employeeCode): string {
+        $this->handleEmployeeMutation(static function (EmployeeManagementService $service) use ($employeeCode): array {
             $password = $service->model()->resetPassword($employeeCode);
-            Session::flash('employee_success', 'Password reset successfully. Temporary password: ' . $password);
-
-            return route_url('admin/employees');
-        }, route_url('admin/employees'));
+            return ['employee' => $employeeCode, 'temporary_password' => $password, '_redirect' => route_url('admin/employees')];
+        }, route_url('admin/employees'), 'Password reset successfully.');
     }
 
     public function uploadEmployeeDocument(): void
     {
         $employeeCode = (string) Request::capture()->post('employee', '');
-        $this->handleEmployeeMutation(static function (EmployeeManagementService $service, Request $request) use ($employeeCode): string {
+        $this->handleEmployeeMutation(static function (EmployeeManagementService $service, Request $request) use ($employeeCode): array {
             $service->uploadDocument($employeeCode, $request->all(), $_FILES);
-            Session::flash('employee_success', 'Employee document uploaded successfully.');
-
-            return route_url('admin/employee-documents') . '&employee=' . urlencode($employeeCode);
-        }, route_url('admin/employee-documents') . '&employee=' . urlencode($employeeCode));
+            return ['employee' => $employeeCode, '_redirect' => route_url('admin/employee-documents') . '&employee=' . urlencode($employeeCode)];
+        }, route_url('admin/employee-documents') . '&employee=' . urlencode($employeeCode), 'Employee document uploaded successfully.');
     }
-
 
     public function deleteEmployeeDocument(): void
     {
         $employeeCode = (string) Request::capture()->post('employee', '');
         $documentId = (int) Request::capture()->post('document_id', 0);
-        $this->handleEmployeeMutation(static function (EmployeeManagementService $service) use ($employeeCode, $documentId): string {
+        $this->handleEmployeeMutation(static function (EmployeeManagementService $service) use ($employeeCode, $documentId): array {
             $service->model()->deleteDocument($documentId);
-            Session::flash('employee_success', 'Employee document deleted successfully.');
-
-            return route_url('admin/employee-documents') . '&employee=' . urlencode($employeeCode);
-        }, route_url('admin/employee-documents') . '&employee=' . urlencode($employeeCode));
+            return ['employee' => $employeeCode, '_redirect' => route_url('admin/employee-documents') . '&employee=' . urlencode($employeeCode)];
+        }, route_url('admin/employee-documents') . '&employee=' . urlencode($employeeCode), 'Employee document deleted successfully.');
     }
     public function saveDepartment(): void
     {
@@ -393,27 +394,13 @@ class AdminController extends Controller
             return route_url('admin/departments');
         }, route_url('admin/departments'));
     }
-    private function handleEmployeeMutation(callable $callback, string $fallbackUrl): void
+    private function handleEmployeeMutation(callable $callback, string $fallbackUrl, string $successMessage = 'Operation completed successfully.'): void
     {
         $request = Request::capture();
-        $response = new Response();
-        $auth = new AuthService();
-
-        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
-            Session::flash('employee_error', 'Your form expired. Please try again.');
-            $response->redirect($fallbackUrl);
-        }
-
-        try {
-            $redirect = $callback(new EmployeeManagementService(), $request);
-            $response->redirect((string) $redirect);
-        } catch (RuntimeException $exception) {
-            Session::flash('employee_error', $exception->getMessage());
-            $response->redirect($fallbackUrl);
-        } catch (\Throwable) {
-            Session::flash('employee_error', 'Employee operation failed. Please verify the database schema and try again.');
-            $response->redirect($fallbackUrl);
-        }
+        $this->mutationResponse($request, static function () use ($callback, $request): array {
+            $result = $callback(new EmployeeManagementService(), $request);
+            return is_array($result) ? $result : ['_redirect' => (string) $result];
+        }, $successMessage, $fallbackUrl, $fallbackUrl, 'employee_error');
     }
 
 
@@ -424,6 +411,14 @@ class AdminController extends Controller
             'navItems' => $this->adminNavItems(),
         ]);
     }
+    public function pumpMaintenance(): void
+    {
+        $this->render('admin/maintenance.php', [
+            'currentRoute' => 'admin/maintenance',
+            'navItems' => $this->adminNavItems(),
+        ]);
+    }
+
 
     public function addPump(): void
     {
@@ -459,10 +454,8 @@ class AdminController extends Controller
     {
         $this->handlePumpMutation(static function (PumpManagementService $service, Request $request): string {
             $service->store($request->all(), self::requestContext($request));
-            Session::flash('pump_success', 'Pump created successfully.');
-
             return route_url('admin/pumps');
-        }, route_url('admin/add-pump'));
+        }, route_url('admin/add-pump'), 'Pump created successfully.');
     }
 
     public function updatePump(): void
@@ -470,30 +463,24 @@ class AdminController extends Controller
         $pumpId = (int) Request::capture()->post('pump_id', 0);
         $this->handlePumpMutation(static function (PumpManagementService $service, Request $request) use ($pumpId): string {
             $service->update($pumpId, $request->all(), self::requestContext($request));
-            Session::flash('pump_success', 'Pump updated successfully.');
-
             return route_url('admin/pumps');
-        }, route_url('admin/edit-pump') . '&pump=' . $pumpId);
+        }, route_url('admin/edit-pump') . '&pump=' . $pumpId, 'Pump updated successfully.');
     }
 
     public function deletePump(): void
     {
         $this->handlePumpMutation(static function (PumpManagementService $service, Request $request): string {
             $service->delete((int) $request->post('pump_id', 0), self::requestContext($request));
-            Session::flash('pump_success', 'Pump deleted successfully.');
-
             return route_url('admin/pumps');
-        }, route_url('admin/pumps'));
+        }, route_url('admin/pumps'), 'Pump deleted successfully.');
     }
 
     public function togglePump(): void
     {
         $this->handlePumpMutation(static function (PumpManagementService $service, Request $request): string {
             $service->toggle((int) $request->post('pump_id', 0), self::requestContext($request));
-            Session::flash('pump_success', 'Pump status updated successfully.');
-
             return route_url('admin/pumps');
-        }, route_url('admin/pumps'));
+        }, route_url('admin/pumps'), 'Pump status updated successfully.');
     }
 
     public function exportPumps(): void
@@ -610,23 +597,9 @@ class AdminController extends Controller
     private function handleShiftMutation(callable $callback, string $fallbackUrl): void
     {
         $request = Request::capture();
-        $response = new Response();
-        $auth = new AuthService();
-
-        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
-            Session::flash('shift_error', 'Your shift form expired. Please try again.');
-            $response->redirect($fallbackUrl);
-        }
-
-        try {
-            $response->redirect((string) $callback(new ShiftManagementService(), $request));
-        } catch (RuntimeException $exception) {
-            Session::flash('shift_error', $exception->getMessage());
-            $response->redirect($fallbackUrl);
-        } catch (\Throwable) {
-            Session::flash('shift_error', 'Shift operation failed. Please verify the database schema and try again.');
-            $response->redirect($fallbackUrl);
-        }
+        $this->mutationResponse($request, static function () use ($callback, $request): array {
+            return ['_redirect' => (string) $callback(new ShiftManagementService(), $request)];
+        }, 'Shift operation completed successfully.', route_url('admin/shift-management'), $fallbackUrl, 'shift_error');
     }
 
     public function saveDutyRoster(): void
@@ -702,23 +675,9 @@ class AdminController extends Controller
     private function handleDutyMutation(callable $callback, string $fallbackUrl): void
     {
         $request = Request::capture();
-        $response = new Response();
-        $auth = new AuthService();
-
-        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
-            Session::flash('duty_error', 'Your duty management form expired. Please try again.');
-            $response->redirect($fallbackUrl);
-        }
-
-        try {
-            $response->redirect((string) $callback(new DutyManagementService(), $request));
-        } catch (RuntimeException $exception) {
-            Session::flash('duty_error', $exception->getMessage());
-            $response->redirect($fallbackUrl);
-        } catch (\Throwable) {
-            Session::flash('duty_error', 'Duty management action failed. Please verify the database schema and try again.');
-            $response->redirect($fallbackUrl);
-        }
+        $this->mutationResponse($request, static function () use ($callback, $request): array {
+            return ['_redirect' => (string) $callback(new DutyManagementService(), $request)];
+        }, 'Duty roster updated successfully.', $fallbackUrl, $fallbackUrl, 'duty_error');
     }
     public function saveFuelDelivery(): void
     {
@@ -730,26 +689,28 @@ class AdminController extends Controller
         }, route_url('admin/fuel-inventory'));
     }
 
+    public function adjustFuelStock(): void
+    {
+        $this->handleFuelInventoryMutation(static function (FuelInventory $inventory, Request $request): string {
+            $inventory->adjustStock($request->all());
+            return route_url('admin/fuel-inventory');
+        }, route_url('admin/fuel-inventory'));
+    }
+
+    public function deleteFuelDelivery(): void
+    {
+        $this->handleFuelInventoryMutation(static function (FuelInventory $inventory, Request $request): string {
+            $inventory->deleteDelivery((int)$request->post('delivery_id', 0));
+            return route_url('admin/fuel-inventory');
+        }, route_url('admin/fuel-inventory'));
+    }
+
     private function handleFuelInventoryMutation(callable $callback, string $fallbackUrl): void
     {
         $request = Request::capture();
-        $response = new Response();
-        $auth = new AuthService();
-
-        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
-            Session::flash('inventory_error', 'Your fuel inventory form expired. Please try again.');
-            $response->redirect($fallbackUrl);
-        }
-
-        try {
-            $response->redirect((string) $callback(new FuelInventory(), $request));
-        } catch (RuntimeException $exception) {
-            Session::flash('inventory_error', $exception->getMessage());
-            $response->redirect($fallbackUrl);
-        } catch (\Throwable) {
-            Session::flash('inventory_error', 'Fuel inventory action failed. Please verify the database schema and try again.');
-            $response->redirect($fallbackUrl);
-        }
+        $this->mutationResponse($request, static function () use ($callback, $request): array {
+            return ['_redirect' => (string)$callback(new FuelInventory(), $request)];
+        }, 'Fuel inventory updated successfully.', $fallbackUrl, $fallbackUrl, 'inventory_error');
     }
     public function verifyFuelSale(): void
     {
@@ -768,23 +729,9 @@ class AdminController extends Controller
     private function handleFuelSalesMutation(callable $callback, string $fallbackUrl): void
     {
         $request = Request::capture();
-        $response = new Response();
-        $auth = new AuthService();
-
-        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
-            Session::flash('fuel_error', 'Your fuel sales form expired. Please try again.');
-            $response->redirect($fallbackUrl);
-        }
-
-        try {
-            $response->redirect((string) $callback(new FuelSale(), $request));
-        } catch (RuntimeException $exception) {
-            Session::flash('fuel_error', $exception->getMessage());
-            $response->redirect($fallbackUrl);
-        } catch (\Throwable) {
-            Session::flash('fuel_error', 'Fuel sales action failed. Please verify the database schema and try again.');
-            $response->redirect($fallbackUrl);
-        }
+        $this->mutationResponse($request, static function () use ($callback, $request): array {
+            return ['_redirect' => (string) $callback(new FuelSale(), $request)];
+        }, 'Fuel sale verification updated successfully.', $fallbackUrl, $fallbackUrl, 'fuel_error');
     }
     public function storeAnnouncement(): void
     {
@@ -820,24 +767,9 @@ class AdminController extends Controller
     private function handleAnnouncementMutation(callable $callback, string $fallbackUrl): void
     {
         $request = Request::capture();
-        $response = new Response();
-        $auth = new AuthService();
-
-        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
-            Session::flash('announcement_error', 'Your announcement form expired. Please try again.');
-            $response->redirect($fallbackUrl);
-        }
-
-        try {
-            $response->redirect((string) $callback(new Announcement(), $request));
-        } catch (RuntimeException $exception) {
-            Session::flash('announcement_error', $exception->getMessage());
-            $response->redirect($fallbackUrl);
-        } catch (\Throwable $exception) {
-            error_log('[Announcement] ' . $exception->getMessage());
-            Session::flash('announcement_error', 'Announcement action failed. Please verify the database schema and try again.');
-            $response->redirect($fallbackUrl);
-        }
+        $this->mutationResponse($request, static function () use ($callback, $request): array {
+            return ['_redirect' => (string)$callback(new Announcement(), $request)];
+        }, 'Announcement updated successfully.', $fallbackUrl, $fallbackUrl, 'announcement_error');
     }
     public function processLeaveRequest(): void
     {
@@ -886,24 +818,9 @@ class AdminController extends Controller
     private function handleLeaveMutation(callable $callback, string $fallbackUrl): void
     {
         $request = Request::capture();
-        $response = new Response();
-        $auth = new AuthService();
-
-        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
-            Session::flash('leave_error', 'Your leave management form expired. Please try again.');
-            $response->redirect($fallbackUrl);
-        }
-
-        try {
-            $response->redirect((string) $callback(new LeaveManagement(), $request));
-        } catch (RuntimeException $exception) {
-            Session::flash('leave_error', $exception->getMessage());
-            $response->redirect($fallbackUrl);
-        } catch (\Throwable $exception) {
-            error_log('[LeaveManagement] ' . $exception->getMessage());
-            Session::flash('leave_error', 'Leave management action failed. Please verify the database schema and try again.');
-            $response->redirect($fallbackUrl);
-        }
+        $this->mutationResponse($request, static function () use ($callback, $request): array {
+            return ['_redirect' => (string) $callback(new LeaveManagement(), $request)];
+        }, 'Leave management updated successfully.', $fallbackUrl, $fallbackUrl, 'leave_error');
     }
     public function saveFuelPrices(): void
     {
@@ -956,26 +873,12 @@ class AdminController extends Controller
             $response->redirect($fallbackUrl);
         }
     }
-    private function handlePumpMutation(callable $callback, string $fallbackUrl): void
+    private function handlePumpMutation(callable $callback, string $fallbackUrl, string $successMessage): void
     {
         $request = Request::capture();
-        $response = new Response();
-        $auth = new AuthService();
 
-        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
-            Session::flash('pump_error', 'Your pump form expired. Please try again.');
-            $response->redirect($fallbackUrl);
-        }
-
-        try {
-            $response->redirect((string) $callback(new PumpManagementService(), $request));
-        } catch (RuntimeException $exception) {
-            Session::flash('pump_error', $exception->getMessage());
-            $response->redirect($fallbackUrl);
-        } catch (\Throwable) {
-            Session::flash('pump_error', 'Something went wrong. Please try again later.');
-            $response->redirect($fallbackUrl);
-        }
+        $successUrl = route_url('admin/pumps');
+        $this->mutationResponse($request, static fn (): mixed => $callback(new PumpManagementService(), $request), $successMessage, $successUrl, $fallbackUrl, 'pump_error');
     }
 
     private static function requestContext(Request $request): array

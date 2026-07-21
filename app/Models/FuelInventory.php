@@ -63,6 +63,12 @@ class FuelInventory extends BaseModel
 
         $fuelTypeId = (int) ($data['fuel_type_id'] ?? 0);
         $fuelType = $this->fuelTypeById($fuelTypeId);
+        $deliveryId = (int)($data['delivery_id'] ?? 0);
+        if ($deliveryId > 0) {
+            $this->updateDelivery($deliveryId, $data);
+            return;
+        }
+
         if ($fuelType === null) {
             throw new RuntimeException('Select a valid fuel type.');
         }
@@ -153,6 +159,85 @@ class FuelInventory extends BaseModel
         });
     }
 
+    public function adjustStock(array $data): void
+    {
+        $this->boot();
+        $fuelTypeId = (int)($data['fuel_type_id'] ?? 0);
+        if ($this->fuelTypeById($fuelTypeId) === null) throw new RuntimeException('Select a valid fuel type.');
+        $quantity = (float)($data['adjustment_quantity'] ?? 0);
+        if ($quantity == 0.0) throw new RuntimeException('Adjustment quantity cannot be zero.');
+        $reason = trim((string)($data['reason'] ?? ''));
+        if ($reason === '') throw new RuntimeException('Adjustment reason is required.');
+        $this->transaction(function (Database $database) use ($fuelTypeId, $quantity, $reason): void {
+            $level = $this->inventoryLevel($database, $fuelTypeId);
+            $previous = (float)$level['current_stock_litres'];
+            $balance = $previous + $quantity;
+            if ($balance < 0) throw new RuntimeException('Stock adjustment would create a negative balance.');
+            $database->update('fuel_inventory_levels', ['current_stock_litres'=>$balance,'last_updated_at'=>date('Y-m-d H:i:s')], ['id'=>(int)$level['id']]);
+            $this->updateSimpleInventory($database, $fuelTypeId, $balance, $level['minimum_stock_litres']);
+            $this->recordSimpleTransaction($database, $fuelTypeId, 'Adjustment', $quantity, $previous, $balance, 'ADJ-' . date('YmdHis'), $reason);
+            $database->insert('fuel_inventory_movements', ['fuel_type_id'=>$fuelTypeId,'tank_id'=>null,'movement_type'=>'adjustment','quantity_litres'=>$quantity,'unit_cost'=>null,'movement_datetime'=>date('Y-m-d H:i:s'),'fuel_delivery_item_id'=>null,'fuel_sale_id'=>null,'reference'=>'ADJ-' . date('YmdHis'),'remarks'=>$reason,'created_by'=>$this->currentUserId()]);
+            $this->logActivity('Fuel Stock Adjusted', $fuelTypeId, ['balance'=>$previous], ['balance'=>$balance,'quantity'=>$quantity,'reason'=>$reason]);
+        });
+    }
+
+    public function deleteDelivery(int $deliveryId): void
+    {
+        $this->boot();
+        $record = $this->deliveryRecord($deliveryId);
+        if ($record === null) throw new RuntimeException('Fuel delivery was not found.');
+        $this->transaction(function (Database $database) use ($record, $deliveryId): void {
+            $level = $this->inventoryLevel($database, (int)$record['fuel_type_id']);
+            $previous = (float)$level['current_stock_litres'];
+            $balance = $previous - (float)$record['quantity_litres'];
+            if ($balance < 0) throw new RuntimeException('This delivery cannot be deleted because some of its stock has already been consumed. Use a stock adjustment instead.');
+            $database->update('fuel_inventory_levels', ['current_stock_litres'=>$balance,'last_updated_at'=>date('Y-m-d H:i:s')], ['id'=>(int)$level['id']]);
+            $this->updateSimpleInventory($database, (int)$record['fuel_type_id'], $balance, $level['minimum_stock_litres']);
+            $database->update('fuel_deliveries', ['deleted_at'=>date('Y-m-d H:i:s')], ['id'=>$deliveryId]);
+            $database->update('fuel_inventory_movements', ['quantity_litres'=>0,'remarks'=>'Delivery deleted: ' . (string)$record['invoice_number']], ['fuel_delivery_item_id'=>(int)$record['item_id']]);
+            $this->recordSimpleTransaction($database, (int)$record['fuel_type_id'], 'Adjustment', -(float)$record['quantity_litres'], $previous, $balance, (string)$record['invoice_number'], 'Delivery deleted.');
+            $this->logActivity('Fuel Delivery Deleted', $deliveryId, $record, ['deleted_at'=>date('Y-m-d H:i:s'),'balance'=>$balance]);
+        });
+    }
+
+    private function updateDelivery(int $deliveryId, array $data): void
+    {
+        $record = $this->deliveryRecord($deliveryId);
+        if ($record === null) throw new RuntimeException('Fuel delivery was not found.');
+        $fuelTypeId = (int)($data['fuel_type_id'] ?? 0);
+        if ($this->fuelTypeById($fuelTypeId) === null) throw new RuntimeException('Select a valid fuel type.');
+        $quantity = $this->positiveNumber($data['quantity_litres'] ?? null, 'Quantity delivered');
+        $cost = $this->positiveNumber($data['cost_per_litre'] ?? null, 'Cost per litre');
+        $supplier = trim((string)($data['supplier_name'] ?? ''));
+        $invoice = strtoupper(trim((string)($data['invoice_number'] ?? '')));
+        $tanker = trim((string)($data['tanker_number'] ?? ''));
+        if ($supplier === '' || $invoice === '' || $tanker === '') throw new RuntimeException('Supplier, tanker, and delivery reference are required.');
+        $duplicate = $this->database()->value('SELECT id FROM fuel_deliveries WHERE invoice_number=:invoice AND id<>:id AND deleted_at IS NULL LIMIT 1', ['invoice'=>$invoice,'id'=>$deliveryId]);
+        if ($duplicate !== null) throw new RuntimeException('Delivery reference number already exists.');
+        $dateTime = date('Y-m-d H:i:s', strtotime((string)($data['delivery_date'] ?? '') . ' ' . (string)($data['delivery_time'] ?? '00:00')));
+        $remarks = trim((string)($data['remarks'] ?? ''));
+        $this->transaction(function (Database $database) use ($record,$deliveryId,$fuelTypeId,$quantity,$cost,$supplier,$invoice,$tanker,$dateTime,$remarks,$data): void {
+            $oldLevel = $this->inventoryLevel($database, (int)$record['fuel_type_id']);
+            $oldBalance = (float)$oldLevel['current_stock_litres'] - (float)$record['quantity_litres'];
+            if ($oldBalance < 0) throw new RuntimeException('This delivery cannot be reduced because some stock has already been consumed. Use a stock adjustment instead.');
+            $database->update('fuel_inventory_levels', ['current_stock_litres'=>$oldBalance,'last_updated_at'=>date('Y-m-d H:i:s')], ['id'=>(int)$oldLevel['id']]);
+            $this->updateSimpleInventory($database, (int)$record['fuel_type_id'], $oldBalance, $oldLevel['minimum_stock_litres']);
+            $newLevel = $this->inventoryLevel($database, $fuelTypeId);
+            $newBalance = (float)$newLevel['current_stock_litres'] + $quantity;
+            $database->update('fuel_inventory_levels', ['current_stock_litres'=>$newBalance,'last_delivery_at'=>$dateTime,'last_updated_at'=>date('Y-m-d H:i:s')], ['id'=>(int)$newLevel['id']]);
+            $this->updateSimpleInventory($database, $fuelTypeId, $newBalance, $newLevel['minimum_stock_litres']);
+            $database->update('fuel_deliveries', ['supplier_id'=>$this->supplierId($database,$supplier),'delivery_datetime'=>$dateTime,'tanker_number'=>$tanker,'invoice_number'=>$invoice,'received_by'=>(int)($data['received_by']??0)?:null,'remarks'=>$remarks?:null], ['id'=>$deliveryId]);
+            $database->update('fuel_delivery_items', ['fuel_type_id'=>$fuelTypeId,'quantity_litres'=>$quantity,'cost_per_litre'=>$cost], ['id'=>(int)$record['item_id']]);
+            $database->update('fuel_inventory_movements', ['fuel_type_id'=>$fuelTypeId,'quantity_litres'=>$quantity,'unit_cost'=>$cost,'movement_datetime'=>$dateTime,'reference'=>$invoice,'remarks'=>$remarks?:'Fuel delivery updated.'], ['fuel_delivery_item_id'=>(int)$record['item_id']]);
+            $this->logActivity('Fuel Delivery Updated', $deliveryId, $record, ['invoice'=>$invoice,'quantity_litres'=>$quantity,'new_balance'=>$newBalance]);
+        });
+    }
+
+    private function deliveryRecord(int $id): ?array
+    {
+        return $this->queryOne('SELECT fd.*, fdi.id AS item_id, fdi.fuel_type_id, fdi.quantity_litres, fdi.cost_per_litre FROM fuel_deliveries fd INNER JOIN fuel_delivery_items fdi ON fdi.fuel_delivery_id=fd.id WHERE fd.id=:id AND fd.deleted_at IS NULL LIMIT 1', ['id'=>$id]);
+    }
+
     public function recordVerifiedSaleTransaction(Database $database, array $sale, float $previousBalance, float $newBalance): void
     {
         $this->ensureCompatibilityTablesOnly();
@@ -191,13 +276,17 @@ class FuelInventory extends BaseModel
 
     private function deliveryHistory(): array
     {
-        $rows = $this->query("SELECT fd.delivery_datetime, fd.tanker_number, fd.invoice_number, fd.remarks, fs.name AS supplier_name, fdi.quantity_litres, fdi.cost_per_litre, ft.name AS fuel_name, ft.short_name, COALESCE(CONCAT(e.first_name, ' ', e.last_name), 'System User') AS received_by FROM fuel_deliveries fd INNER JOIN fuel_suppliers fs ON fs.id = fd.supplier_id INNER JOIN fuel_delivery_items fdi ON fdi.fuel_delivery_id = fd.id INNER JOIN fuel_types ft ON ft.id = fdi.fuel_type_id LEFT JOIN employees e ON e.id = fd.received_by WHERE fd.deleted_at IS NULL ORDER BY fd.delivery_datetime DESC, fd.id DESC LIMIT 100");
+        $rows = $this->query("SELECT fd.id, fd.delivery_datetime, fd.tanker_number, fd.invoice_number, fd.remarks, fd.received_by AS received_by_id, fs.name AS supplier_name, fdi.fuel_type_id, fdi.quantity_litres, fdi.cost_per_litre, ft.name AS fuel_name, ft.short_name, COALESCE(CONCAT(e.first_name, ' ', e.last_name), 'System User') AS received_by FROM fuel_deliveries fd INNER JOIN fuel_suppliers fs ON fs.id = fd.supplier_id INNER JOIN fuel_delivery_items fdi ON fdi.fuel_delivery_id = fd.id INNER JOIN fuel_types ft ON ft.id = fdi.fuel_type_id LEFT JOIN employees e ON e.id = fd.received_by WHERE fd.deleted_at IS NULL ORDER BY fd.delivery_datetime DESC, fd.id DESC LIMIT 100");
 
         return array_map(static function (array $row): array {
             $timestamp = strtotime((string) $row['delivery_datetime']) ?: time();
             $quantity = (float) $row['quantity_litres'];
             $cost = (float) $row['cost_per_litre'];
             return [
+                'id' => (int)$row['id'],
+                'fuel_type_id' => (int)$row['fuel_type_id'],
+                'received_by_id' => (int)($row['received_by_id'] ?? 0),
+                'remarks' => (string)($row['remarks'] ?? ''),
                 'date' => date('Y-m-d', $timestamp),
                 'time' => date('H:i:s', $timestamp),
                 'fuel' => $row['fuel_name'] . ' (' . $row['short_name'] . ')',

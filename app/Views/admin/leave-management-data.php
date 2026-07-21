@@ -34,6 +34,7 @@ try {
         'approvalStatusDistribution' => [0, 0, 0, 0],
         'approvalWorkflows' => [],
         'activeApprovalWorkflow' => 'multi_level',
+        'leavePolicySettings' => ['allow_cancellation'=>1,'require_documents'=>1,'notify_approvers'=>1,'auto_approve_emergency'=>0,'allow_half_day'=>1,'max_requests_per_year'=>12,'approval_deadline_hours'=>48],
         'leaveSuccess' => null,
         'leaveError' => 'Leave management data could not be loaded. Please verify the database schema.',
     ];
@@ -55,5 +56,6 @@ $leaveTypeDistribution = $leaveData['leaveTypeDistribution'];
 $approvalStatusDistribution = $leaveData['approvalStatusDistribution'];
 $approvalWorkflows = $leaveData['approvalWorkflows'];
 $activeApprovalWorkflow = $leaveData['activeApprovalWorkflow'];
+$leavePolicySettings = $leaveData['leavePolicySettings'];
 $leaveSuccess = $leaveData['leaveSuccess'];
 $leaveError = $leaveData['leaveError'];

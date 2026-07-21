@@ -194,11 +194,17 @@
     selectors.retakePhotoBtn.addEventListener('click', openNativeCamera);
     selectors.removePhotoBtn.addEventListener('click', clearPhoto);
     selectors.photoInput.addEventListener('change', handlePhotoSelection);
-    selectors.clockInForm?.addEventListener('submit', (event) => {
+    selectors.clockInForm?.addEventListener('submit', async (event) => {
       if (!state.photoCaptured) {
         event.preventDefault();
         notify('warning', 'Photo Required', 'Please take a fresh selfie before clocking in.');
+        return;
       }
+      event.preventDefault();
+      await window.FuelOpsAjax.submitForm(selectors.clockInForm, {
+        button: event.submitter,
+        onProgress: () => {}
+      }).catch(() => {});
     });
 
     selectors.historySearch.addEventListener('input', () => {

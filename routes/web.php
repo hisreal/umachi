@@ -32,6 +32,8 @@ return static function (Router $router): void {
     $router->post('admin/settings/system/save', [AdminController::class, 'saveSystemSettings']);
     $router->post('admin/fuel-sales/verify', [AdminController::class, 'verifyFuelSale']);
     $router->post('admin/fuel-inventory/delivery', [AdminController::class, 'saveFuelDelivery']);
+    $router->post('admin/fuel-inventory/adjust', [AdminController::class, 'adjustFuelStock']);
+    $router->post('admin/fuel-inventory/delete-delivery', [AdminController::class, 'deleteFuelDelivery']);
     $router->post('admin/announcements/store', [AdminController::class, 'storeAnnouncement']);
     $router->post('admin/announcements/update', [AdminController::class, 'updateAnnouncement']);
     $router->post('admin/announcements/action', [AdminController::class, 'processAnnouncement']);
@@ -41,6 +43,7 @@ return static function (Router $router): void {
     $router->post('admin/leave-approval-settings/save', [AdminController::class, 'saveLeaveSettings']);
     $router->get('admin/pumps', [AdminController::class, 'pumps']);
     $router->get('admin/add-pump', [AdminController::class, 'addPump']);
+    $router->get('admin/maintenance', [AdminController::class, 'pumpMaintenance']);
     $router->get('admin/edit-pump', [AdminController::class, 'editPump']);
     $router->get('admin/pumps/export', [AdminController::class, 'exportPumps']);
     $router->post('admin/pumps/store', [AdminController::class, 'storePump']);
@@ -64,6 +67,8 @@ return static function (Router $router): void {
     $router->get('admin/activity-log', [AdminController::class, 'activityLog']);
     $router->get('admin/attendance-history/details', [AdminController::class, 'attendanceDetails']);
     $router->get('admin/attendance-history/selfie', [AdminController::class, 'attendanceSelfie']);
+    $router->post('admin/attendance-settings/update', [AdminController::class, 'saveAttendanceSettings']);
+    $router->post('admin/attendance-history/adjust', [AdminController::class, 'adjustAttendance']);
     $router->get(['admin', 'admin/dashboard'], [AdminController::class, 'dashboard']);
     $router->get(['', 'dashboard', 'attendance'], [AttendanceController::class, 'dashboard']);
     $router->get('attendance/clock-in', [AttendanceController::class, 'clockIn']);

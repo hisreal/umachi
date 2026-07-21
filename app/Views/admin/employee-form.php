@@ -41,7 +41,7 @@ if (!isset($formEmployee['emergency_contact_name'], $formEmployee['emergency_con
 <?php endif; ?>
 
 <?php $employeeFormAction = $isEditMode ? route_url('admin/employees/update') . '&employee=' . urlencode((string) $formEmployee['id']) : route_url('admin/employees/store'); $employeeCsrf = (new \App\Services\AuthService())->csrfToken(); ?>
-<form class="employee-form needs-validation" id="employeeForm" method="post" action="<?php echo e($employeeFormAction); ?>" enctype="multipart/form-data" novalidate>
+<form class="employee-form needs-validation" id="employeeForm" method="post" action="<?php echo e($employeeFormAction); ?>" enctype="multipart/form-data" data-employee-ajax-form novalidate>
     <input type="hidden" name="_csrf_token" value="<?php echo e($employeeCsrf); ?>">
     <article class="app-card card employee-form-section">
         <div class="employee-section-heading">

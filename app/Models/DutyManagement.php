@@ -223,9 +223,26 @@ class DutyManagement extends BaseModel
     public function saveAssignment(array $data, array $context = []): int
     {
         $payload = $this->validateAssignment($data);
+        $assignmentId = (int) ($data['assignment_id'] ?? 0);
 
-        return (int) $this->transaction(function (Database $database) use ($payload, $context): int|string {
-            $this->assertAssignmentRules($payload);
+        return (int) $this->transaction(function (Database $database) use ($payload, $assignmentId, $context): int|string {
+            $existing = $assignmentId > 0 ? $this->findAssignment($assignmentId) : null;
+            if ($assignmentId > 0 && $existing === null) {
+                throw new RuntimeException('Duty assignment record not found.');
+            }
+            $this->assertAssignmentRules($payload, $assignmentId > 0 ? $assignmentId : null);
+            if ($existing !== null) {
+                $database->update('duty_assignments', $payload, ['id' => $assignmentId]);
+                if (!empty($existing['legacy_roster_assignment_id'])) {
+                    $database->update('roster_assignments', [
+                        'roster_date' => $payload['assignment_date'], 'employee_id' => $payload['employee_id'],
+                        'shift_id' => $payload['shift_id'], 'pump_id' => $payload['pump_id'],
+                        'status' => 'scheduled', 'notes' => $payload['remarks'],
+                    ], ['id' => (int) $existing['legacy_roster_assignment_id']]);
+                }
+                $this->logActivity('Duty Assignment Updated', 'duty_assignment', $assignmentId, $existing, $payload, $context);
+                return $assignmentId;
+            }
             $payload['created_by'] = $this->currentUserId();
             $id = $database->insert('duty_assignments', $payload);
             $this->mirrorRosterAssignment((int) $id, $payload);
@@ -320,7 +337,7 @@ class DutyManagement extends BaseModel
         ];
     }
 
-    private function assertAssignmentRules(array $payload): void
+    private function assertAssignmentRules(array $payload, ?int $exceptId = null): void
     {
         $roster = $this->findRoster((int) $payload['roster_id']);
         if ($roster === null || $roster['status'] === 'Archived') {
@@ -340,25 +357,32 @@ class DutyManagement extends BaseModel
             throw new RuntimeException('Inactive shifts cannot be assigned.');
         }
 
+        $exceptSql = $exceptId === null ? '' : ' AND id <> :except_id';
+        $bindings = ['employee_id' => $payload['employee_id'], 'shift_id' => $payload['shift_id'], 'assignment_date' => $payload['assignment_date']];
+        if ($exceptId !== null) { $bindings['except_id'] = $exceptId; }
         $employeeConflict = (int) $this->database()->value(
-            "SELECT COUNT(*) FROM duty_assignments WHERE deleted_at IS NULL AND status <> 'Cancelled' AND employee_id = :employee_id AND shift_id = :shift_id AND assignment_date = :assignment_date",
-            ['employee_id' => $payload['employee_id'], 'shift_id' => $payload['shift_id'], 'assignment_date' => $payload['assignment_date']]
+            "SELECT COUNT(*) FROM duty_assignments WHERE deleted_at IS NULL AND status <> 'Cancelled' AND employee_id = :employee_id AND shift_id = :shift_id AND assignment_date = :assignment_date" . $exceptSql,
+            $bindings
         );
         if ($employeeConflict > 0) {
             throw new RuntimeException('Employee already has a duty assignment for this shift.');
         }
 
+        $bindings = ['pump_id' => $payload['pump_id'], 'shift_id' => $payload['shift_id'], 'assignment_date' => $payload['assignment_date']];
+        if ($exceptId !== null) { $bindings['except_id'] = $exceptId; }
         $pumpConflict = (int) $this->database()->value(
-            "SELECT COUNT(*) FROM duty_assignments WHERE deleted_at IS NULL AND status <> 'Cancelled' AND pump_id = :pump_id AND shift_id = :shift_id AND assignment_date = :assignment_date",
-            ['pump_id' => $payload['pump_id'], 'shift_id' => $payload['shift_id'], 'assignment_date' => $payload['assignment_date']]
+            "SELECT COUNT(*) FROM duty_assignments WHERE deleted_at IS NULL AND status <> 'Cancelled' AND pump_id = :pump_id AND shift_id = :shift_id AND assignment_date = :assignment_date" . $exceptSql,
+            $bindings
         );
         if ($pumpConflict > 0) {
             throw new RuntimeException('This pump is already assigned for the selected shift.');
         }
 
+        $bindings = ['shift_id' => $payload['shift_id'], 'assignment_date' => $payload['assignment_date']];
+        if ($exceptId !== null) { $bindings['except_id'] = $exceptId; }
         $capacity = (int) $this->database()->value(
-            "SELECT COUNT(*) FROM duty_assignments WHERE deleted_at IS NULL AND status <> 'Cancelled' AND shift_id = :shift_id AND assignment_date = :assignment_date",
-            ['shift_id' => $payload['shift_id'], 'assignment_date' => $payload['assignment_date']]
+            "SELECT COUNT(*) FROM duty_assignments WHERE deleted_at IS NULL AND status <> 'Cancelled' AND shift_id = :shift_id AND assignment_date = :assignment_date" . $exceptSql,
+            $bindings
         );
         if ($capacity >= (int) $shift['max_employees']) {
             throw new RuntimeException('Maximum number of employees has been reached for this shift.');
@@ -483,10 +507,12 @@ class DutyManagement extends BaseModel
             'roster_name' => (string) $row['roster_name'],
             'date' => (string) $row['assignment_date'],
             'employee_id' => (string) $row['employee_code'],
+            'employee_db_id' => (int) $row['employee_id'],
             'employee' => trim((string) $row['first_name'] . ' ' . (string) $row['last_name']),
             'department' => (string) ($row['department_name'] ?? 'Unassigned'),
             'role' => (string) ($row['role_name'] ?? 'Unassigned'),
             'shift' => (string) $row['shift_name'],
+            'shift_id' => (int) $row['shift_id'],
             'pump' => trim((string) $row['pump_code'] . ' - ' . (string) $row['pump_name'], ' -'),
             'pump_id' => (int) $row['pump_id'],
             'fuel_type' => $short === '' ? $fuel : $fuel . ' (' . $short . ')',

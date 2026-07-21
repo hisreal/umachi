@@ -8,7 +8,7 @@ $formAction = $isEditMode ? route_url('admin/shifts/update') : route_url('admin/
 ?>
 <?php if (!empty($shiftError)): ?><div class="alert alert-danger" role="alert"><?php echo e($shiftError); ?></div><?php endif; ?>
 <?php if (!empty($shiftSuccess)): ?><div class="alert alert-success" role="alert"><?php echo e($shiftSuccess); ?></div><?php endif; ?>
-<form class="duty-form needs-validation" id="shiftConfigForm" method="post" action="<?php echo e($formAction); ?>" novalidate>
+<form class="duty-form needs-validation" id="shiftConfigForm" method="post" action="<?php echo e($formAction); ?>" data-ajax-form data-ajax-loading-text="Saving shift..." novalidate>
     <?php echo csrf_field(); ?>
     <?php if ($isEditMode): ?><input type="hidden" name="shift_id" value="<?php echo e((string) $formShift['id']); ?>"><?php endif; ?>
     <article class="app-card card duty-form-card">

@@ -32,6 +32,7 @@ final class AttendantHistoryService
             "SELECT fs.sale_date, COALESCE(s.name, 'Unassigned') shift_name, p.pump_code, p.pump_name,
                     ft.name fuel_name, fs.opening_meter, fs.closing_meter, fs.litres_sold, fs.unit_price,
                     fs.amount_collected, fs.status, fs.verification_status, fs.submitted_at,
+                    fs.expected_amount, fs.cash_received, fs.pos_received, fs.bank_transfer_received, fs.total_received, fs.difference_amount, fs.balance_status, fs.payment_remark,
                     COALESCE(v.username, 'Not Verified') verified_by
              FROM fuel_sales fs
              INNER JOIN pumps p ON p.id = fs.pump_id
@@ -223,7 +224,7 @@ final class AttendantHistoryService
 
     private function mapSale(array $row): array
     {
-        return ['date' => (string) $row['sale_date'], 'shift' => (string) $row['shift_name'], 'pump' => trim((string) $row['pump_code'] . ' - ' . (string) $row['pump_name']), 'pump_code' => (string) $row['pump_code'], 'fuel' => (string) $row['fuel_name'], 'opening_meter' => (float) $row['opening_meter'], 'closing_meter' => (float) $row['closing_meter'], 'liters' => (float) $row['litres_sold'], 'unit_price' => (float) $row['unit_price'], 'amount' => (float) $row['amount_collected'], 'status' => ucwords(str_replace('_', ' ', (string) $row['status'])), 'verified_by' => (string) $row['verified_by'], 'submitted_time' => empty($row['submitted_at']) ? 'N/A' : date('h:i A', strtotime((string) $row['submitted_at']))];
+        return ['date' => (string) $row['sale_date'], 'shift' => (string) $row['shift_name'], 'pump' => trim((string) $row['pump_code'] . ' - ' . (string) $row['pump_name']), 'pump_code' => (string) $row['pump_code'], 'fuel' => (string) $row['fuel_name'], 'opening_meter' => (float) $row['opening_meter'], 'closing_meter' => (float) $row['closing_meter'], 'liters' => (float) $row['litres_sold'], 'unit_price' => (float) $row['unit_price'], 'expected_amount' => (float) $row['expected_amount'], 'cash_received' => (float) $row['cash_received'], 'pos_received' => (float) $row['pos_received'], 'bank_transfer_received' => (float) $row['bank_transfer_received'], 'amount' => (float) $row['total_received'], 'difference_amount' => (float) $row['difference_amount'], 'balance_status' => (string) $row['balance_status'], 'payment_remark' => (string) ($row['payment_remark'] ?? ''), 'status' => ucwords(str_replace('_', ' ', (string) $row['status'])), 'verified_by' => (string) $row['verified_by'], 'submitted_time' => empty($row['submitted_at']) ? 'N/A' : date('h:i A', strtotime((string) $row['submitted_at']))];
     }
 
     private function mapAttendance(array $row): array

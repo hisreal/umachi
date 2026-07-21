@@ -121,9 +121,21 @@ class Announcement extends BaseModel
 
         $status = match ($action) {
             'publish' => 'Published',
-            'archive', 'delete' => 'Archived',
+            'unpublish' => 'Draft',
+            'archive' => 'Archived',
+            'delete' => null,
             default => throw new RuntimeException('Select a valid announcement action.'),
         };
+
+        if ($action === 'delete') {
+            $this->transaction(function (Database $database) use ($id, $existing): void {
+                $database->delete('announcement_reads', ['announcement_id' => $id]);
+                $database->delete('announcement_roles', ['announcement_id' => $id]);
+                $database->delete('announcements', ['id' => $id]);
+                $this->log('Announcement Deleted', $id, $existing, ['deleted' => true]);
+            });
+            return;
+        }
 
         $this->update('announcements', ['status' => $status, 'updated_by' => $this->currentUserId()], ['id' => $id]);
         $this->log('Announcement ' . $status, $id, ['status' => $existing['status']], ['status' => $status]);

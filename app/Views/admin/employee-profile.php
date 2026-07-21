@@ -38,7 +38,7 @@ require __DIR__ . '/../includes/header.php';
                     <h2><?php echo e($selectedEmployee['name']); ?></h2>
                     <p><?php echo e($selectedEmployee['id']); ?> · <?php echo e($selectedEmployee['role']); ?></p>
                     <span class="table-badge <?php echo e($statusClasses[$selectedEmployee['status']] ?? 'employee-status--active'); ?>"><?php echo e($selectedEmployee['status']); ?></span>
-                    <div class="employee-profile-meta"><div><span>Department</span><strong><?php echo e($selectedEmployee['department']); ?></strong></div><div><span>Date Joined</span><strong><?php echo e(format_date($selectedEmployee['date_joined'] ?? null)); ?></strong></div></div>
+                    <div class="employee-profile-meta"><div><span>Department</span><strong><?php echo e($selectedEmployee['department']); ?></strong></div><div><span>Date Joined</span><strong><?php echo e(format_date($selectedEmployee['date_joined'] ?? null)); ?></strong></div><div><span>Duration of Service</span><strong><?php echo e($selectedEmployee['service_duration'] ?? \App\Services\ServiceDurationFormatter::format((string) ($selectedEmployee['date_joined'] ?? ''))); ?></strong></div></div>
                     <a class="btn btn-outline-brand w-100" href="<?php echo e(route_url('admin/employee-documents')); ?>&employee=<?php echo e($selectedEmployee['id']); ?>"><i class="fa-solid fa-folder-open"></i>Manage Documents</a>
                 </article>
             </div>

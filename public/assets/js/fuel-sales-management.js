@@ -45,7 +45,7 @@
         downloadFile(`fuel-sales-${Date.now()}.csv`, 'text/csv;charset=utf-8', csv);
     };
 
-    const rows = Array.from(document.querySelectorAll('[data-fuel-row]'));
+    const rows = () => Array.from(document.querySelectorAll('[data-fuel-row]'));
     const fields = {
         search: document.getElementById('fuelSearch'),
         date: document.getElementById('fuelDateFilter'),
@@ -61,7 +61,7 @@
     const perPage = 5;
     let page = 1;
 
-    const filteredRows = () => rows.filter((row) => (!fields.search || !fields.search.value || normalize(row.dataset.search).includes(normalize(fields.search.value)))
+    const filteredRows = () => rows().filter((row) => (!fields.search || !fields.search.value || normalize(row.dataset.search).includes(normalize(fields.search.value)))
         && (!fields.date || !fields.date.value || row.dataset.date === fields.date.value)
         && (!fields.shift || !fields.shift.value || row.dataset.shift === fields.shift.value)
         && (!fields.pump || !fields.pump.value || row.dataset.pump === fields.pump.value)
@@ -70,13 +70,13 @@
         && (!fields.attendant || !fields.attendant.value || row.dataset.attendant === fields.attendant.value));
 
     const renderRows = () => {
-        if (rows.length === 0) { return; }
+        if (rows().length === 0) { return; }
         const visible = filteredRows();
         const pages = Math.max(1, Math.ceil(visible.length / perPage));
         page = Math.min(page, pages);
         const start = (page - 1) * perPage;
         const end = start + perPage;
-        rows.forEach((row) => { row.hidden = true; });
+        rows().forEach((row) => { row.hidden = true; });
         visible.slice(start, end).forEach((row) => { row.hidden = false; });
         if (pageSummary) { pageSummary.textContent = `Showing ${visible.length === 0 ? 0 : start + 1}-${Math.min(end, visible.length)} of ${visible.length} fuel sales records`; }
         if (prev) { prev.disabled = page <= 1; }
@@ -127,9 +127,59 @@
         makeChart('fuelDistributionChart', 'doughnut', 'fuelDistribution', 'Fuel Type Distribution');
         makeChart('fuelPumpPerformanceChart', 'bar', 'pumpPerformance', 'Pump Performance', { indexAxis: 'y' });
     }
+    window.renderFuelRows = renderRows;
 }());
 
 
 
+
+    document.addEventListener('submit', async (event) => {
+        const form = event.target;
+        const route = new URL(form.action, window.location.href).searchParams.get('route') || '';
+        if (route !== 'admin/fuel-sales/verify') return;
+        event.preventDefault(); event.stopImmediatePropagation();
+        const button = event.submitter || form.querySelector('[type="submit"]');
+        const action = button?.value || '';
+        if (!['verify', 'reject', 'correction'].includes(action)) return;
+        const title = action === 'verify' ? 'Verify fuel sale?' : action === 'reject' ? 'Reject fuel sale?' : 'Request correction?';
+        const confirmed = !window.Swal ? window.confirm(title) : (await window.Swal.fire({
+            icon: action === 'verify' ? 'question' : 'warning', title,
+            text: 'The transaction status and live reports will update immediately.',
+            showCancelButton: true, confirmButtonColor: action === 'verify' ? '#16a34a' : '#ed3237',
+        })).isConfirmed;
+        if (!confirmed) return;
+        let actionInput = form.querySelector('input[name="action"]');
+        if (!actionInput) { actionInput = document.createElement('input'); actionInput.type = 'hidden'; actionInput.name = 'action'; form.append(actionInput); }
+        actionInput.value = action;
+        try {
+            await window.FuelOpsAjax.submitForm(form, { button, refresh: '.clock-workspace', redirect: false, loadingText: 'Updating sale...' });
+        } catch (error) {
+            // Shared AJAX handling preserves notes and displays validation/service errors.
+        }
+    }, true);
+
+    let liveRefreshRunning = false;
+    const refreshLiveFuelData = async () => {
+        if (liveRefreshRunning || document.hidden || document.querySelector('form[action*="fuel-sales%2Fverify"], form[action*="fuel-sales/verify"]')) return;
+        const selectors = [];
+        if (document.querySelector('.fuel-summary-grid')) selectors.push('.fuel-summary-grid');
+        if (document.getElementById('fuelSalesBody')) selectors.push('#fuelSalesBody');
+        else if (document.querySelector('.fuel-table tbody')) selectors.push('.fuel-table tbody');
+        if (!selectors.length) return;
+        liveRefreshRunning = true;
+        try {
+            await window.FuelOpsAjax.refresh(selectors, window.location.href);
+            window.renderFuelRows?.();
+        } catch (error) {
+            // Background refresh remains silent; the next interval retries.
+        } finally {
+            liveRefreshRunning = false;
+        }
+    };
+
+    if (document.querySelector('.fuel-module-page')) {
+        window.setInterval(refreshLiveFuelData, 30000);
+        document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshLiveFuelData(); });
+    }
 
 

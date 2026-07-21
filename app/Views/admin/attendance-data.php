@@ -10,6 +10,8 @@ $attendanceSummary = $attendanceModel->adminSummary();
 $attendanceRecords = $attendanceModel->getAttendanceHistory(null, [
     'search' => (string) ($_GET['search'] ?? ''),
     'status' => (string) ($_GET['status'] ?? ''),
+    'employee' => (string) ($_GET['employee'] ?? ''),
+    'shift' => (string) ($_GET['shift'] ?? ''),
     'department' => (string) ($_GET['department'] ?? ''),
     'role' => (string) ($_GET['role'] ?? ''),
     'date' => (string) ($_GET['date'] ?? ''),
@@ -19,7 +21,7 @@ $departments = array_column(\App\Core\Database::getInstance()->select("SELECT na
 $roles = array_column(\App\Core\Database::getInstance()->select("SELECT name FROM job_titles WHERE deleted_at IS NULL ORDER BY name"), 'name');
 $shifts = array_column(\App\Core\Database::getInstance()->select("SELECT name FROM shifts WHERE deleted_at IS NULL ORDER BY name"), 'name');
 $statuses = ['Present', 'Late', 'Absent', 'Half Day', 'On Leave'];
-$employees = array_values(array_unique(array_column($attendanceRecords, 'name')));
+$employees = array_column(\App\Core\Database::getInstance()->select("SELECT CONCAT(first_name, ' ', last_name) AS name FROM employees WHERE deleted_at IS NULL ORDER BY first_name, last_name"), 'name');
 
 $recentActivities = array_map(static fn (array $record): array => [
     'icon' => $record['clock_out'] !== '-' ? 'fa-solid fa-right-from-bracket' : 'fa-solid fa-right-to-bracket',
@@ -27,22 +29,7 @@ $recentActivities = array_map(static fn (array $record): array => [
     'time' => $record['date'],
 ], array_slice($attendanceRecords, 0, 5));
 
-$attendanceSettings = [
-    'clock_in' => '06:00',
-    'clock_out' => '14:00',
-    'grace_period' => 0,
-    'late_threshold' => 0,
-    'overtime_start' => '14:00',
-    'max_overtime' => 4,
-    'shift_duration' => '8 Hours',
-    'auto_clock_out' => false,
-    'photo_required' => true,
-    'face_verification' => false,
-    'gps_verification' => false,
-    'early_clock_in' => true,
-    'manual_adjustment' => true,
-    'approval_required' => 'Supervisor',
-];
+$attendanceSettings = $attendanceModel->adminSettings();
 
 $attendanceChartData = [
     'monthly' => ['labels' => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'], 'values' => [0, 0, 0, 0, 0, 0, (int) $attendanceSummary['present_today']]],

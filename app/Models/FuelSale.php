@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Core\Database;
 use App\Core\Session;
+use App\Services\FuelPaymentReconciler;
 use RuntimeException;
 use Throwable;
 
@@ -57,8 +58,22 @@ class FuelSale extends BaseModel
             throw new RuntimeException('Litres sold cannot be negative.');
         }
         $expectedAmount = round($litresSold * $unitPrice, 2);
-        $amountCollected = $expectedAmount;
-        $variance = 0.0;
+        $payment = FuelPaymentReconciler::reconcile(
+            $expectedAmount,
+            $this->money($data['cash_received'] ?? null, 'Cash received'),
+            $this->money($data['pos_received'] ?? null, 'POS / Card payments'),
+            $this->money($data['bank_transfer_received'] ?? null, 'Bank transfer'),
+            (string) ($data['payment_remark'] ?? '')
+        );
+        $cashReceived = $payment['cash_received'];
+        $posReceived = $payment['pos_received'];
+        $bankTransferReceived = $payment['bank_transfer_received'];
+        $totalReceived = $payment['total_received'];
+        $differenceAmount = $payment['difference_amount'];
+        $balanceStatus = $payment['balance_status'];
+        $paymentRemark = $payment['payment_remark'];
+        $amountCollected = $totalReceived;
+        $variance = round($totalReceived - $expectedAmount, 2);
         $remarks = trim((string) ($data['remarks'] ?? ''));
         $saleCode = $this->saleCode();
 
@@ -80,9 +95,16 @@ class FuelSale extends BaseModel
             'unit_price' => $unitPrice,
             'price_per_litre' => $unitPrice,
             'expected_amount' => $expectedAmount,
-            'total_amount' => $expectedAmount,
+            'total_amount' => $totalReceived,
             'amount_collected' => $amountCollected,
             'variance' => $variance,
+            'cash_received' => $cashReceived,
+            'pos_received' => $posReceived,
+            'bank_transfer_received' => $bankTransferReceived,
+            'total_received' => $totalReceived,
+            'difference_amount' => $differenceAmount,
+            'balance_status' => $balanceStatus,
+            'payment_remark' => $paymentRemark !== '' ? $paymentRemark : null,
             'remarks' => $remarks !== '' ? $remarks : null,
             'submitted_at' => date('Y-m-d H:i:s'),
             'status' => 'pending',
@@ -99,6 +121,18 @@ class FuelSale extends BaseModel
             'litres_sold' => $litresSold,
             'amount_collected' => $amountCollected,
         ]);
+        $this->logActivity('Fuel Payment Summary Submitted', $saleId, null, [
+            'expected_amount' => $expectedAmount,
+            'total_received' => $totalReceived,
+            'balance_status' => $balanceStatus,
+        ]);
+        if ($balanceStatus !== 'balanced') {
+            $this->logActivity('Payment Difference Recorded', $saleId, null, [
+                'difference_amount' => $differenceAmount,
+                'balance_status' => $balanceStatus,
+                'payment_remark' => $paymentRemark,
+            ]);
+        }
 
         return $saleId;
     }
@@ -195,6 +229,7 @@ class FuelSale extends BaseModel
             'transaction_id' => 'N/A', 'date' => date('Y-m-d'), 'pump' => 'N/A', 'fuel_type' => 'N/A', 'attendant' => 'N/A',
             'shift' => 'N/A', 'opening_meter' => 0, 'closing_meter' => 0, 'liters_sold' => 0, 'amount' => 0,
             'amount_collected' => 0, 'expected_amount' => 0, 'variance' => 0, 'status' => 'Pending', 'submitted_time' => '-',
+            'cash_received' => 0, 'pos_received' => 0, 'bank_transfer_received' => 0, 'total_received' => 0, 'difference_amount' => 0, 'balance_status' => 'balanced', 'payment_remark' => '',
         ];
     }
 
@@ -222,6 +257,13 @@ class FuelSale extends BaseModel
             'amount' => (float) ($row['amount_collected'] ?? $row['total_amount'] ?? 0),
             'amount_collected' => (float) ($row['amount_collected'] ?? $row['total_amount'] ?? 0),
             'variance' => (float) ($row['variance'] ?? 0),
+            'cash_received' => (float) ($row['cash_received'] ?? 0),
+            'pos_received' => (float) ($row['pos_received'] ?? 0),
+            'bank_transfer_received' => (float) ($row['bank_transfer_received'] ?? 0),
+            'total_received' => (float) ($row['total_received'] ?? $row['amount_collected'] ?? 0),
+            'difference_amount' => (float) ($row['difference_amount'] ?? 0),
+            'balance_status' => (string) ($row['balance_status'] ?? 'balanced'),
+            'payment_remark' => (string) ($row['payment_remark'] ?? ''),
             'status' => $status,
             'status_key' => (string) ($row['status'] ?? 'pending'),
             'submitted_time' => empty($row['submitted_at']) ? '-' : date('h:i A', strtotime((string) $row['submitted_at'])),
@@ -434,6 +476,9 @@ class FuelSale extends BaseModel
 
     private function money(mixed $value, string $label): float
     {
+        if (is_numeric((string) $value) && (float) $value < 0) {
+            throw new RuntimeException($label . ' cannot be negative.');
+        }
         $normalized = preg_replace('/[^0-9.]/', '', (string) $value);
         return $this->number($normalized, $label);
     }
@@ -534,6 +579,13 @@ class FuelSale extends BaseModel
         $add('expected_amount', '`expected_amount` DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER `price_per_litre`');
         $add('amount_collected', '`amount_collected` DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER `total_amount`');
         $add('variance', '`variance` DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER `amount_collected`');
+        $add('cash_received', '`cash_received` DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER `variance`');
+        $add('pos_received', '`pos_received` DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER `cash_received`');
+        $add('bank_transfer_received', '`bank_transfer_received` DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER `pos_received`');
+        $add('total_received', '`total_received` DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER `bank_transfer_received`');
+        $add('difference_amount', '`difference_amount` DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER `total_received`');
+        $add('balance_status', "`balance_status` VARCHAR(20) NOT NULL DEFAULT 'balanced' AFTER `difference_amount`");
+        $add('payment_remark', '`payment_remark` TEXT NULL AFTER `balance_status`');
         $add('remarks', '`remarks` TEXT NULL AFTER `rejection_reason`');
         $add('verification_status', "`verification_status` VARCHAR(40) NOT NULL DEFAULT 'Pending' AFTER `status`");
 

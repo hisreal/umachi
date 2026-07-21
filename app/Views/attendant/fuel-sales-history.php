@@ -121,11 +121,11 @@ require __DIR__ . '/../includes/header.php';
                                     <th>Opening Meter Reading</th>
                                     <th>Closing Meter Reading</th>
                                     <th>Liters Sold</th>
-                                    <th>Fuel Price / Litre</th><th>Amount Collected</th><th>Verification Status</th><th>Verified By</th><th>Submission Time</th>
+                                    <th>Fuel Price / Litre</th><th>Expected</th><th>Payment Breakdown</th><th>Total Received</th><th>Difference / Balance</th><th>Verification Status</th><th>Verified By</th><th>Submission Time</th>
                                 </tr>
                             </thead>
                             <tbody id="fuelSalesTableBody">
-                                <?php if ($fuelSales === []): ?><tr><td colspan="12" class="text-center text-muted py-4">No fuel sales records found.</td></tr><?php else: ?>
+                                <?php if ($fuelSales === []): ?><tr><td colspan="16" class="text-center text-muted py-4">No fuel sales records found.</td></tr><?php else: ?>
                                 <?php foreach ($fuelSales as $record): ?>
                                     <?php $status = $record['status']; ?>
                                     <tr data-sales-row data-date="<?php echo e($record['date']); ?>" data-month="<?php echo e(substr($record['date'], 5, 2)); ?>" data-year="<?php echo e(substr($record['date'], 0, 4)); ?>" data-shift="<?php echo e($record['shift']); ?>" data-pump="<?php echo e($record['pump']); ?>" data-fuel="<?php echo e($record['fuel']); ?>" data-status="<?php echo e($status); ?>">
@@ -136,7 +136,7 @@ require __DIR__ . '/../includes/header.php';
                                         <td><?php echo e(number_format((float) $record['opening_meter'])); ?></td>
                                         <td><?php echo e(number_format((float) $record['closing_meter'])); ?></td>
                                         <td><?php echo e(number_format((float) $record['liters'])); ?> L</td>
-                                        <td>NGN <?php echo e(number_format((float) $record['unit_price'], 2)); ?></td><td>NGN <?php echo e(number_format((float) $record['amount'], 2)); ?></td><td><span class="table-badge sales-status <?php echo e($statusClasses[$status] ?? 'sales-status--pending'); ?>"><?php echo e($status); ?></span></td><td><?php echo e($record['verified_by']); ?></td><td><?php echo e($record['submitted_time']); ?></td>
+                                        <td>NGN <?php echo e(number_format((float) $record['unit_price'], 2)); ?></td><td>NGN <?php echo e(number_format((float) $record['expected_amount'], 2)); ?></td><td><small>Cash: NGN <?php echo e(number_format((float) $record['cash_received'], 2)); ?><br>POS: NGN <?php echo e(number_format((float) $record['pos_received'], 2)); ?><br>Transfer: NGN <?php echo e(number_format((float) $record['bank_transfer_received'], 2)); ?></small></td><td>NGN <?php echo e(number_format((float) $record['amount'], 2)); ?></td><td>NGN <?php echo e(number_format((float) $record['difference_amount'], 2)); ?><br><small><?php echo e(ucfirst((string) $record['balance_status'])); ?><?php echo $record['payment_remark'] !== '' ? ' ? ' . e($record['payment_remark']) : ''; ?></small></td><td><span class="table-badge sales-status <?php echo e($statusClasses[$status] ?? 'sales-status--pending'); ?>"><?php echo e($status); ?></span></td><td><?php echo e($record['verified_by']); ?></td><td><?php echo e($record['submitted_time']); ?></td>
                                     </tr>
                                 <?php endforeach; ?><?php endif; ?>
                             </tbody>

@@ -117,6 +117,7 @@ require __DIR__ . '/../includes/header.php';
         <section class="inventory-chart-grid mt-4" aria-label="Fuel inventory charts"><article class="app-card card inventory-chart-card"><h2>Monthly Fuel Deliveries</h2><canvas id="inventoryDeliveriesChart" height="280"></canvas></article><article class="app-card card inventory-chart-card"><h2>Fuel Consumption Trend</h2><canvas id="inventoryConsumptionChart" height="280"></canvas></article><article class="app-card card inventory-chart-card inventory-chart-card--wide"><h2>Current Fuel Distribution</h2><canvas id="inventoryDistributionChart" height="260"></canvas></article></section>
     </section>
 </main>
+<script>window.inventoryDeliveries = <?php echo json_encode($deliveryHistory, JSON_THROW_ON_ERROR); ?>;</script>
 <?php require __DIR__ . '/../includes/footer.php'; ?>
 
 

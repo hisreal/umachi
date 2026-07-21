@@ -11,7 +11,7 @@
 
     const normalize = (value) => String(value || '').trim().toLowerCase();
 
-    const employeeRows = Array.from(document.querySelectorAll('[data-employee-row]'));
+    const employeeRows = () => Array.from(document.querySelectorAll('[data-employee-row]'));
     const employeeSearch = document.getElementById('employeeSearch');
     const filters = {
         department: document.getElementById('departmentFilter'),
@@ -85,7 +85,7 @@
         printWindow.focus();
         printWindow.print();
     };
-    const filteredEmployees = () => employeeRows.filter((row) => {
+    const filteredEmployees = () => employeeRows().filter((row) => {
         const query = normalize(employeeSearch ? employeeSearch.value : '');
         return (!query || normalize(row.dataset.search).includes(query))
             && (!filters.department || !filters.department.value || row.dataset.department === filters.department.value)
@@ -95,11 +95,11 @@
     });
 
     const renderEmployees = () => {
-        if (employeeRows.length === 0) {
+        if (employeeRows().length === 0) {
             return;
         }
         const visible = filteredEmployees();
-        employeeRows.forEach((row) => { row.hidden = !visible.includes(row); });
+        employeeRows().forEach((row) => { row.hidden = !visible.includes(row); });
         if (pageSummary) {
             pageSummary.textContent = `Showing all ${visible.length} employees`;
         }
@@ -207,9 +207,9 @@
 
     const documentTypeFilter = document.getElementById('documentTypeFilter');
     const documentDateFilter = document.getElementById('documentDateFilter');
-    const documentCards = Array.from(document.querySelectorAll('[data-document-card]'));
+    const documentCards = () => Array.from(document.querySelectorAll('[data-document-card]'));
     const renderDocuments = () => {
-        documentCards.forEach((card) => {
+        documentCards().forEach((card) => {
             const matchesType = !documentTypeFilter || !documentTypeFilter.value || card.dataset.type === documentTypeFilter.value;
             const matchesDate = !documentDateFilter || !documentDateFilter.value || card.dataset.date === documentDateFilter.value;
             card.hidden = !(matchesType && matchesDate);
@@ -221,4 +221,92 @@
 
     renderEmployees();
 }());
+
+    const progressReporter = (form) => {
+        let wrapper = form.nextElementSibling;
+        if (!wrapper || !wrapper.matches('[data-upload-progress]')) {
+            wrapper = document.createElement('div');
+            wrapper.className = 'progress mt-3';
+            wrapper.dataset.uploadProgress = 'true';
+            wrapper.setAttribute('role', 'progressbar');
+            wrapper.setAttribute('aria-label', 'Upload progress');
+            wrapper.innerHTML = '<div class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%">0%</div>';
+            form.insertAdjacentElement('afterend', wrapper);
+        }
+        const bar = wrapper.querySelector('.progress-bar');
+        wrapper.hidden = false;
+        return (percent) => {
+            const value = Math.max(0, Math.min(100, Number(percent) || 0));
+            wrapper.setAttribute('aria-valuenow', String(value));
+            bar.style.width = `${value}%`;
+            bar.textContent = `${value}%`;
+            if (value === 100) window.setTimeout(() => { wrapper.hidden = true; }, 900);
+        };
+    };
+
+    document.addEventListener('submit', async (event) => {
+        if (event.defaultPrevented) return;
+        const form = event.target;
+        if (!window.FuelOpsAjax || !(form instanceof HTMLFormElement)) return;
+
+        if (form.matches('[data-employee-ajax-form]')) {
+            event.preventDefault();
+            form.classList.add('was-validated');
+            if (!form.checkValidity()) return;
+            const hasUpload = Boolean(form.querySelector('input[type="file"]')?.files?.length);
+            const action = form.action;
+            const actionRoute = new URL(action, window.location.href).searchParams.get('route');
+            await window.FuelOpsAjax.submitForm(form, {
+                button: event.submitter,
+                redirect: false,
+                onProgress: hasUpload ? progressReporter(form) : undefined
+            }).then((payload) => {
+                if (actionRoute === 'admin/employees/store') {
+                    const employeeListUrl = payload.meta?.redirect;
+                    if (employeeListUrl) window.location.assign(employeeListUrl);
+                    return;
+                } else if (payload.data?.employee) {
+                    const updatedAction = new URL(form.action, window.location.href);
+                    updatedAction.searchParams.set('employee', payload.data.employee);
+                    form.action = updatedAction.toString();
+                    const heading = document.querySelector('.employee-hero h1');
+                    if (heading) heading.textContent = `Edit ${form.elements.first_name.value} ${form.elements.last_name.value}`.trim();
+                }
+            }).catch(() => {});
+            return;
+        }
+
+        if (form.matches('[data-employee-document-upload]')) {
+            event.preventDefault();
+            form.classList.add('was-validated');
+            if (!form.checkValidity()) return;
+            await window.FuelOpsAjax.submitForm(form, {
+                button: event.submitter,
+                redirect: false,
+                refresh: ['.employee-summary-grid', '#documentGrid'],
+                onProgress: progressReporter(form)
+            }).then(() => {
+                form.reset();
+                form.classList.remove('was-validated');
+            }).catch(() => {});
+            return;
+        }
+
+        if (!form.matches('[data-confirm-submit]')) return;
+        event.preventDefault();
+        const isDocumentAction = form.action.includes('delete-document');
+        const isPasswordReset = form.action.includes('reset-password');
+        await window.FuelOpsAjax.submitForm(form, {
+            button: event.submitter,
+            redirect: false,
+            notify: !isPasswordReset,
+            refresh: isDocumentAction ? ['.employee-summary-grid', '#documentGrid'] : (isPasswordReset ? undefined : ['.employee-summary-grid', '#employeeTableBody'])
+        }).then((payload) => {
+            if (isPasswordReset) {
+                const password = payload.data?.temporary_password || '';
+                window.FuelOpsAjax.notify('success', `Temporary password: ${password}`, 'Password Reset Successful');
+            }
+            renderEmployees();
+        }).catch(() => {});
+    });
 

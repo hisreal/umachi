@@ -53,16 +53,33 @@
     const drawCharts = () => { if (!chartData) { return; } drawLineChart(document.getElementById('attendanceMonthlyChart'), chartData.monthly); drawBarChart(document.getElementById('attendanceDailyChart'), chartData.daily); drawDoughnutChart(document.getElementById('attendanceStatusChart'), chartData.status); };
     drawCharts(); window.addEventListener('resize', drawCharts);
 
-    const rows = Array.from(document.querySelectorAll('[data-attendance-row]'));
-    const fields = {
-        search: document.getElementById('attendanceSearch'), date: document.getElementById('attendanceDateFilter'), department: document.getElementById('attendanceDepartmentFilter'), role: document.getElementById('attendanceRoleFilter'), employee: document.getElementById('attendanceEmployeeFilter'), shift: document.getElementById('attendanceShiftFilter'), status: document.getElementById('attendanceStatusFilter'),
-    };
+    const rows = () => Array.from(document.querySelectorAll('[data-attendance-row]'));
+    const fields = { search: document.getElementById('attendanceSearch'), date: document.getElementById('attendanceDateFilter'), department: document.getElementById('attendanceDepartmentFilter'), role: document.getElementById('attendanceRoleFilter'), employee: document.getElementById('attendanceEmployeeFilter'), shift: document.getElementById('attendanceShiftFilter'), status: document.getElementById('attendanceStatusFilter') };
     const pageSummary = document.getElementById('attendancePageSummary'); const prev = document.getElementById('prevAttendancePage'); const next = document.getElementById('nextAttendancePage'); const perPage = 5; let page = 1;
-    const filteredRows = () => rows.filter((row) => (!fields.search || !fields.search.value || normalize(row.dataset.search).includes(normalize(fields.search.value))) && (!fields.date || !fields.date.value || row.dataset.date === fields.date.value) && (!fields.department || !fields.department.value || row.dataset.department === fields.department.value) && (!fields.role || !fields.role.value || row.dataset.role === fields.role.value) && (!fields.employee || !fields.employee.value || row.dataset.employee === fields.employee.value) && (!fields.shift || !fields.shift.value || row.dataset.shift === fields.shift.value) && (!fields.status || !fields.status.value || row.dataset.status === fields.status.value));
-    const renderRows = () => { if (rows.length === 0) { return; } const visible = filteredRows(); const pages = Math.max(1, Math.ceil(visible.length / perPage)); page = Math.min(page, pages); const start = (page - 1) * perPage; const end = start + perPage; rows.forEach((row) => { row.hidden = true; }); visible.slice(start, end).forEach((row) => { row.hidden = false; }); if (pageSummary) { pageSummary.textContent = `Showing ${visible.length === 0 ? 0 : start + 1}-${Math.min(end, visible.length)} of ${visible.length} attendance records`; } if (prev) { prev.disabled = page <= 1; } if (next) { next.disabled = page >= pages; } };
-    Object.values(fields).forEach((field) => { if (!field) { return; } field.addEventListener('input', () => { page = 1; renderRows(); }); field.addEventListener('change', () => { page = 1; renderRows(); }); });
-    if (prev) { prev.addEventListener('click', () => { page -= 1; renderRows(); }); }
-    if (next) { next.addEventListener('click', () => { page += 1; renderRows(); }); }
+    const renderRows = () => { const visible = rows(); if (visible.length === 0) { if (pageSummary) pageSummary.textContent = 'Showing 0 attendance records'; return; } const pages = Math.max(1, Math.ceil(visible.length / perPage)); page = Math.min(page, pages); const start = (page - 1) * perPage; const end = start + perPage; visible.forEach((row) => { row.hidden = true; }); visible.slice(start, end).forEach((row) => { row.hidden = false; }); if (pageSummary) pageSummary.textContent = `Showing ${start + 1}-${Math.min(end, visible.length)} of ${visible.length} attendance records`; if (prev) prev.disabled = page <= 1; if (next) next.disabled = page >= pages; };
+    const filterUrl = () => {
+        const url = new URL(window.location.href);
+        Object.entries(fields).forEach(([key, field]) => {
+            const value = field?.value?.trim() || '';
+            if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
+        });
+        return url;
+    };
+    let filterTimer;
+    const loadFilteredAttendance = () => {
+        window.clearTimeout(filterTimer);
+        filterTimer = window.setTimeout(async () => {
+            const url = filterUrl(); page = 1;
+            try {
+                await window.FuelOpsAjax.refresh(['.attendance-stats-grid', '#attendanceHistoryBody'], url.toString());
+                window.history.replaceState({}, '', url.toString());
+                renderRows();
+            } catch (error) { window.FuelOpsAjax.notify('error', error.message); }
+        }, 250);
+    };
+    Object.values(fields).forEach((field) => { if (!field) return; field.addEventListener('input', loadFilteredAttendance); field.addEventListener('change', loadFilteredAttendance); });
+    if (prev) prev.addEventListener('click', () => { page -= 1; renderRows(); });
+    if (next) next.addEventListener('click', () => { page += 1; renderRows(); });
     renderRows();
 
     document.addEventListener('click', (event) => {
@@ -75,14 +92,10 @@
 
     const settingsForm = document.getElementById('attendanceSettingsForm');
     if (settingsForm) {
-        settingsForm.addEventListener('submit', (event) => {
+        settingsForm.addEventListener('submit', async (event) => {
             event.preventDefault(); settingsForm.classList.add('was-validated');
             if (!settingsForm.checkValidity()) { showAlert('warning', 'Review Settings', 'Please complete all attendance configuration fields.'); return; }
-            // ===========================================
-            // DATABASE PLACEHOLDER
-            // Save attendance settings.
-            // ===========================================
-            showAlert('success', 'Attendance Settings Saved (Demo Mode)', 'Settings will be saved to MySQL during backend integration.');
+            await window.FuelOpsAjax.submitForm(settingsForm, { button: event.submitter, redirect: false }).catch(() => {});
         });
         settingsForm.addEventListener('reset', () => { window.setTimeout(() => settingsForm.classList.remove('was-validated'), 0); });
     }

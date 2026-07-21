@@ -20,7 +20,7 @@ $formAction = $isEditMode ? route_url('admin/pumps/update') : route_url('admin/p
 ?>
 <?php if (!empty($pumpError)): ?><div class="alert alert-danger" role="alert"><?php echo e($pumpError); ?></div><?php endif; ?>
 <?php if (!empty($pumpSuccess)): ?><div class="alert alert-success" role="alert"><?php echo e($pumpSuccess); ?></div><?php endif; ?>
-<form class="pump-form needs-validation" id="pumpForm" method="post" action="<?php echo e($formAction); ?>" novalidate>
+<form class="pump-form needs-validation" id="pumpForm" method="post" action="<?php echo e($formAction); ?>" data-ajax-form data-ajax-loading-text="Saving..." novalidate>
     <?php echo csrf_field(); ?>
     <?php if ($isEditMode): ?><input type="hidden" name="pump_id" value="<?php echo e((string) $formPump['id']); ?>"><?php endif; ?>
     <article class="app-card card pump-form-card">

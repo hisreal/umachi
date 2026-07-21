@@ -191,4 +191,28 @@
 
     updateAttachmentRequirement();
     datesAreValid();
+    document.addEventListener('submit', async (event) => {
+        const submittedForm = event.target;
+        const route = new URL(submittedForm.action, window.location.href).searchParams.get('route') || '';
+        if (submittedForm.id !== 'leaveApplicationForm' && route !== 'leave-requests/cancel') return;
+        event.preventDefault(); event.stopImmediatePropagation();
+        if (submittedForm.id === 'leaveApplicationForm') {
+            datesAreValid(); updateAttachmentRequirement(); submittedForm.classList.add('was-validated');
+            if (!submittedForm.checkValidity()) return;
+        } else {
+            const confirmed = !window.Swal ? window.confirm('Cancel this leave request?') : (await window.Swal.fire({ icon: 'warning', title: 'Cancel leave request?', text: 'The request status will be updated immediately.', showCancelButton: true, confirmButtonColor: '#ed3237' })).isConfirmed;
+            if (!confirmed) return;
+        }
+        try {
+            await window.FuelOpsAjax.submitForm(submittedForm, {
+                button: event.submitter || submittedForm.querySelector('[type="submit"]'),
+                refresh: '.clock-workspace',
+                redirect: false,
+                loadingText: submittedForm.id === 'leaveApplicationForm' ? 'Submitting request...' : 'Cancelling...',
+            });
+        } catch (error) {
+            // The shared helper keeps entered values and renders validation errors.
+        }
+    }, true);
+
 })();

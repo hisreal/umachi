@@ -12,6 +12,7 @@ $extraScripts = $extraScripts ?? [];
 
     <script src="<?php echo e(asset_url('vendor/bootstrap/js/bootstrap.bundle.min.js')); ?>"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="<?php echo e(asset_url('js/ajax.js')); ?>?v=<?php echo e((string) @filemtime(BASE_PATH . '/public/assets/js/ajax.js')); ?>"></script>
     <?php foreach ($extraScripts as $scriptPath): ?>
         <?php
         $scriptUrl = str_starts_with($scriptPath, 'http') ? $scriptPath : asset_url($scriptPath);

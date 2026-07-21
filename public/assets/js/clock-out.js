@@ -12,6 +12,10 @@
     const closingMeter = byId('closingMeter');
     const litersSold = byId('litersSold');
     const amountCollected = byId('amountCollected');
+    const cashReceived = byId('cashReceived');
+    const posReceived = byId('posReceived');
+    const bankTransferReceived = byId('bankTransferReceived');
+    const paymentRemark = byId('paymentRemark');
     const unitPrice = Number(form ? form.dataset.unitPrice : 0) || 0;
     const clockOutPhoto = byId('clockOutPhoto');
 
@@ -21,6 +25,13 @@
     const summaryClosingMeter = byId('summaryClosingMeter');
     const summaryLitersSold = byId('summaryLitersSold');
     const summaryAmountCollected = byId('summaryAmountCollected');
+    const summaryExpectedAmount = byId('summaryExpectedAmount');
+    const summaryCashReceived = byId('summaryCashReceived');
+    const summaryPosReceived = byId('summaryPosReceived');
+    const summaryBankTransferReceived = byId('summaryBankTransferReceived');
+    const summaryDifference = byId('summaryDifference');
+    const paymentStatus = byId('paymentStatus');
+    const summaryPaymentStatus = byId('summaryPaymentStatus');
     const hasFuelSalesFields = Boolean(pumpSelection && fuelType && openingMeter && closingMeter && litersSold && amountCollected);
 
     const formatNumber = (value) => {
@@ -95,9 +106,22 @@
         const openingValue = Number(openingMeter.value) || 0;
         const closingValue = Number(closingMeter.value) || 0;
         const calculatedLiters = Math.max(0, closingValue - openingValue);
-        const calculatedAmount = calculatedLiters * unitPrice;
+        const expectedAmount = calculatedLiters * unitPrice;
+        const cash = Number(cashReceived.value) || 0;
+        const pos = Number(posReceived.value) || 0;
+        const transfer = Number(bankTransferReceived.value) || 0;
+        const totalReceived = cash + pos + transfer;
+        const difference = expectedAmount - totalReceived;
+        const balanced = Math.abs(difference) < 0.01;
+        const status = balanced ? 'Balanced' : (difference > 0 ? `Shortage ${formatCurrency(difference)}` : `Overpaid ${formatCurrency(Math.abs(difference))}`);
+        const badgeClass = balanced ? 'bg-success' : (difference > 0 ? 'bg-danger' : 'bg-warning text-dark');
+        paymentRemark.required = !balanced;
         litersSold.value = formatNumber(calculatedLiters).replace(/,/g, '');
-        amountCollected.value = unitPrice > 0 ? formatCurrency(calculatedAmount) : 'Fuel price not set';
+        amountCollected.value = unitPrice > 0 ? formatCurrency(totalReceived) : 'Fuel price not set';
+        [paymentStatus, summaryPaymentStatus].forEach((badge) => {
+            badge.className = `badge ${badgeClass}`;
+            badge.textContent = status;
+        });
 
         summaryPump.textContent = pumpSelection.value || 'Pending';
         summaryFuelType.textContent = fuelType.value || 'Pending';
@@ -105,6 +129,11 @@
         summaryClosingMeter.textContent = formatNumber(closingMeter.value);
         summaryLitersSold.textContent = formatNumber(litersSold.value);
         summaryAmountCollected.textContent = amountCollected.value || formatCurrency(0);
+        summaryExpectedAmount.textContent = formatCurrency(expectedAmount);
+        summaryCashReceived.textContent = formatCurrency(cash);
+        summaryPosReceived.textContent = formatCurrency(pos);
+        summaryBankTransferReceived.textContent = formatCurrency(transfer);
+        summaryDifference.textContent = formatCurrency(difference);
     };
 
     const validateField = (field) => {
@@ -132,6 +161,9 @@
             openingMeter,
             closingMeter,
             amountCollected,
+            cashReceived,
+            posReceived,
+            bankTransferReceived,
         ];
 
         const fieldsAreComplete = requiredFields.every(validateField);
@@ -160,17 +192,38 @@
             return false;
         }
 
+        const paymentFields = [cashReceived, posReceived, bankTransferReceived];
+        if (paymentFields.some((field) => Number(field.value) < 0 || !Number.isFinite(Number(field.value)))) {
+            paymentFields.forEach((field) => field.classList.toggle('is-invalid', Number(field.value) < 0 || !Number.isFinite(Number(field.value))));
+            showAlert('warning', 'Invalid Payment Amount', 'Cash, POS / Card, and bank transfer values must be valid non-negative amounts.');
+            return false;
+        }
+
+        const expectedAmount = Number(litersSold.value) * unitPrice;
+        const totalReceived = paymentFields.reduce((total, field) => total + Number(field.value), 0);
+        if (Math.abs(expectedAmount - totalReceived) >= 0.01 && !paymentRemark.value.trim()) {
+            paymentRemark.classList.add('is-invalid');
+            showAlert('warning', 'Payment Explanation Required', 'Explain the shortage or overpayment before clocking out.');
+            return false;
+        }
+
         return true;
     };
 
-    const handleFormSubmit = (event) => {
+    const handleFormSubmit = async (event) => {
         if (!validateForm()) {
             event.preventDefault();
+            return;
         }
+        event.preventDefault();
+        await window.FuelOpsAjax.submitForm(form, {
+            button: event.submitter,
+            onProgress: () => {}
+        }).catch(() => {});
     };
 
     if (form && hasFuelSalesFields) {
-        [pumpSelection, fuelType, openingMeter, closingMeter, litersSold, amountCollected].filter(Boolean).forEach((field) => {
+        [pumpSelection, fuelType, openingMeter, closingMeter, litersSold, amountCollected, cashReceived, posReceived, bankTransferReceived, paymentRemark].filter(Boolean).forEach((field) => {
             field.addEventListener('input', syncSummary);
             field.addEventListener('change', syncSummary);
             field.addEventListener('input', () => field.classList.remove('is-invalid'));

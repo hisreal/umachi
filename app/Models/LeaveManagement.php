@@ -49,6 +49,7 @@ class LeaveManagement extends BaseModel
             'approvalStatusDistribution'=>[$this->countStatus('pending'),$this->countStatus('approved'),$this->countStatus('rejected'),$this->countStatus('forwarded')],
             'approvalWorkflows'=>self::WORKFLOWS,
             'activeApprovalWorkflow'=>$this->approvalMode(),
+            'leavePolicySettings'=>$this->policySettings(),
             'leaveSuccess'=>Session::pullFlash('leave_success'),
             'leaveError'=>Session::pullFlash('leave_error'),
         ];
@@ -156,11 +157,21 @@ class LeaveManagement extends BaseModel
     public function saveType(array $data): void
     {
         $this->boot();
+        $typeId = (int)($data['leave_type_id'] ?? 0);
         $name = trim((string)($data['leave_name'] ?? ''));
         if ($name === '') throw new RuntimeException('Leave name is required.');
-        if ($this->database()->value('SELECT id FROM leave_types WHERE name = :name AND deleted_at IS NULL LIMIT 1', ['name'=>$name]) !== null) throw new RuntimeException('A leave type with this name already exists.');
-        $id = (int)$this->insert('leave_types', ['name'=>$name,'description'=>trim((string)($data['description'] ?? '')),'max_days_per_year'=>max(1,(int)($data['maximum_days'] ?? 1)),'is_paid'=>isset($data['is_paid'])?1:0,'requires_attachment'=>isset($data['requires_attachment'])?1:0,'status'=>strtolower((string)($data['status'] ?? 'active')) === 'inactive' ? 'inactive' : 'active']);
-        $this->log('Leave Type Added', $id, null, ['name'=>$name]);
+        $existingId = $this->database()->value('SELECT id FROM leave_types WHERE name = :name AND deleted_at IS NULL LIMIT 1', ['name'=>$name]);
+        if ($existingId !== null && (int)$existingId !== $typeId) throw new RuntimeException('A leave type with this name already exists.');
+        $payload = ['name'=>$name,'description'=>trim((string)($data['description'] ?? '')),'max_days_per_year'=>max(1,(int)($data['maximum_days'] ?? 1)),'is_paid'=>isset($data['is_paid'])?1:0,'requires_attachment'=>isset($data['requires_attachment'])?1:0,'status'=>strtolower((string)($data['status'] ?? 'active')) === 'inactive' ? 'inactive' : 'active'];
+        if ($typeId > 0) {
+            $existing = $this->queryOne('SELECT * FROM leave_types WHERE id = :id AND deleted_at IS NULL LIMIT 1', ['id'=>$typeId]);
+            if ($existing === null) throw new RuntimeException('Leave type was not found.');
+            $this->update('leave_types', $payload, ['id'=>$typeId]);
+            $this->log('Leave Type Updated', $typeId, $existing, $payload);
+            return;
+        }
+        $id = (int)$this->insert('leave_types', $payload);
+        $this->log('Leave Type Added', $id, null, $payload);
     }
 
     public function toggleType(int $id): void
@@ -179,6 +190,12 @@ class LeaveManagement extends BaseModel
         $mode = (string)($data['approvalWorkflow'] ?? 'multi_level');
         if (!isset(self::WORKFLOWS[$mode])) throw new RuntimeException('Select a valid approval workflow.');
         $this->database()->execute('INSERT INTO leave_approval_settings (id, approval_mode, updated_by, updated_at) VALUES (1, :mode, :user, NOW()) ON DUPLICATE KEY UPDATE approval_mode = VALUES(approval_mode), updated_by = VALUES(updated_by), updated_at = NOW()', ['mode'=>$mode,'user'=>$this->userId()]);
+        $this->database()->execute('INSERT INTO leave_policy_settings (id, allow_cancellation, require_documents, notify_approvers, auto_approve_emergency, allow_half_day, max_requests_per_year, approval_deadline_hours, updated_by) VALUES (1, :cancel, :documents, :notify, :emergency, :half_day, :max_requests, :deadline, :user) ON DUPLICATE KEY UPDATE allow_cancellation=VALUES(allow_cancellation), require_documents=VALUES(require_documents), notify_approvers=VALUES(notify_approvers), auto_approve_emergency=VALUES(auto_approve_emergency), allow_half_day=VALUES(allow_half_day), max_requests_per_year=VALUES(max_requests_per_year), approval_deadline_hours=VALUES(approval_deadline_hours), updated_by=VALUES(updated_by)', [
+            'cancel'=>isset($data['allow_cancellation'])?1:0, 'documents'=>isset($data['require_documents'])?1:0,
+            'notify'=>isset($data['notify_approvers'])?1:0, 'emergency'=>isset($data['auto_approve_emergency'])?1:0,
+            'half_day'=>isset($data['allow_half_day'])?1:0, 'max_requests'=>max(1,(int)($data['max_requests_per_year']??12)),
+            'deadline'=>max(1,(int)($data['approval_deadline_hours']??48)), 'user'=>$this->userId(),
+        ]);
         $this->workflowId($mode);
         $this->log('Approval Setting Changed', 1, null, ['approval_mode'=>$mode]);
     }
@@ -189,6 +206,7 @@ class LeaveManagement extends BaseModel
         $this->database()->execute("CREATE TABLE IF NOT EXISTS leave_request_actions (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, leave_request_id BIGINT UNSIGNED NOT NULL, step_id BIGINT UNSIGNED NULL, actor_user_id BIGINT UNSIGNED NULL, action ENUM('submitted','forwarded','approved','rejected','cancelled','commented') NOT NULL, from_status VARCHAR(40) NULL, to_status VARCHAR(40) NULL, comments TEXT NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id), KEY idx_leave_actions_request (leave_request_id, created_at), KEY idx_leave_actions_actor (actor_user_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $this->database()->execute("CREATE TABLE IF NOT EXISTS leave_request_attachments (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, leave_request_id BIGINT UNSIGNED NOT NULL, file_path VARCHAR(255) NOT NULL, original_name VARCHAR(180) NULL, uploaded_by BIGINT UNSIGNED NULL, created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id), KEY idx_leave_attachments_request (leave_request_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $this->database()->execute("CREATE TABLE IF NOT EXISTS leave_approval_settings (id BIGINT UNSIGNED NOT NULL, approval_mode ENUM('manager','supervisor','manager_supervisor','admin','multi_level') NOT NULL DEFAULT 'multi_level', updated_by BIGINT UNSIGNED NULL, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $this->database()->execute("CREATE TABLE IF NOT EXISTS leave_policy_settings (id BIGINT UNSIGNED NOT NULL, allow_cancellation TINYINT(1) NOT NULL DEFAULT 1, require_documents TINYINT(1) NOT NULL DEFAULT 1, notify_approvers TINYINT(1) NOT NULL DEFAULT 1, auto_approve_emergency TINYINT(1) NOT NULL DEFAULT 0, allow_half_day TINYINT(1) NOT NULL DEFAULT 1, max_requests_per_year SMALLINT UNSIGNED NOT NULL DEFAULT 12, approval_deadline_hours SMALLINT UNSIGNED NOT NULL DEFAULT 48, updated_by BIGINT UNSIGNED NULL, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $this->database()->execute("CREATE TABLE IF NOT EXISTS leave_approval_workflows (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, name VARCHAR(120) NOT NULL, slug VARCHAR(120) NOT NULL, description TEXT NULL, status ENUM('active','inactive') NOT NULL DEFAULT 'active', created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE KEY uq_leave_workflows_slug (slug)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
     }
 
@@ -331,6 +349,20 @@ class LeaveManagement extends BaseModel
             'comment' => (string) ($row['comments'] ?? ''),
         ], $rows);
     }
+
+    private function policySettings(): array
+    {
+        $defaults = ['allow_cancellation'=>1,'require_documents'=>1,'notify_approvers'=>1,'auto_approve_emergency'=>0,'allow_half_day'=>1,'max_requests_per_year'=>12,'approval_deadline_hours'=>48];
+        $row = $this->queryOne('SELECT * FROM leave_policy_settings WHERE id = 1 LIMIT 1');
+        if ($row === null) return $defaults;
+        return [
+            'allow_cancellation'=>(int)$row['allow_cancellation'], 'require_documents'=>(int)$row['require_documents'],
+            'notify_approvers'=>(int)$row['notify_approvers'], 'auto_approve_emergency'=>(int)$row['auto_approve_emergency'],
+            'allow_half_day'=>(int)$row['allow_half_day'], 'max_requests_per_year'=>(int)$row['max_requests_per_year'],
+            'approval_deadline_hours'=>(int)$row['approval_deadline_hours'],
+        ];
+    }
+
 
     private function approvalMode(): string
     {

@@ -36,16 +36,11 @@
         modal?.show();
 
         try {
-            const response = await fetch(`${endpoint}&id=${encodeURIComponent(recordId)}`, {
-                headers: { Accept: 'application/json' },
-                credentials: 'same-origin',
-            });
-            const payload = await response.json();
-            if (!response.ok || !payload.success || !payload.record) {
+            const payload = await window.FuelOpsAjax.request(`${endpoint}&id=${encodeURIComponent(recordId)}`);
+            if (!payload.data?.record) {
                 throw new Error(payload.message || 'Attendance record not found.');
             }
-
-            const record = payload.record;
+            const record = payload.data.record;
             content.innerHTML = `
                 <div class="attendance-selfie-details-grid">
                     ${detail('Employee Name: ', record.employee_name)}
@@ -78,5 +73,51 @@
         } catch (error) {
             content.innerHTML = `<div class="alert alert-danger mb-0">${escapeHtml(error.message || 'Attendance details could not be loaded.')}</div>`;
         }
+    });
+})();
+(() => {
+    'use strict';
+    const endpoint = window.attendanceSelfieDetailsUrl || '';
+
+    const adjustmentElement = document.getElementById('attendanceAdjustmentModal');
+    const adjustmentForm = document.getElementById('attendanceAdjustmentForm');
+    const adjustmentModal = adjustmentElement && window.bootstrap ? new window.bootstrap.Modal(adjustmentElement) : null;
+    document.addEventListener('click', async (event) => {
+        const button = event.target.closest('[data-attendance-adjust]');
+        if (!button || !adjustmentForm) return;
+        const recordId = button.dataset.attendanceAdjust;
+        const summary = document.getElementById('attendanceAdjustmentRecord');
+        adjustmentForm.reset();
+        adjustmentForm.elements.attendance_id.value = recordId;
+        if (summary) summary.textContent = 'Loading attendance record...';
+        adjustmentModal?.show();
+        try {
+            const payload = await window.FuelOpsAjax.request(`${endpoint}&id=${encodeURIComponent(recordId)}`);
+            const record = payload.data?.record;
+            if (!record) throw new Error('Attendance record not found.');
+            adjustmentForm.elements.clock_in.value = record.clock_in_value || '';
+            adjustmentForm.elements.clock_out.value = record.clock_out_value || '';
+            adjustmentForm.elements.status.value = record.status || 'Present';
+            adjustmentForm.elements.remarks.value = record.remarks === 'No attendance remarks.' ? '' : record.remarks;
+            if (summary) summary.textContent = `${record.employee_name} (${record.employee_id}) ? ${record.attendance_date}`;
+        } catch (error) {
+            if (summary) summary.textContent = error.message || 'Attendance record could not be loaded.';
+        }
+    });
+
+    adjustmentForm?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        adjustmentForm.classList.add('was-validated');
+        if (!adjustmentForm.checkValidity()) return;
+        await window.FuelOpsAjax.submitForm(adjustmentForm, {
+            button: event.submitter,
+            redirect: false,
+            refresh: ['.attendance-stats-grid', '#attendanceHistoryBody'],
+            refreshUrl: window.location.href
+        }).then(() => {
+            adjustmentModal?.hide();
+            adjustmentForm.classList.remove('was-validated');
+            document.dispatchEvent(new CustomEvent('attendance:updated'));
+        }).catch(() => {});
     });
 })();

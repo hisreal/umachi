@@ -200,4 +200,103 @@
         renderWorkflow();
         initCharts();
     });
+
+    const ensureTypeId = (form) => {
+        let input = form.querySelector('[name="leave_type_id"]');
+        if (!input) {
+            input = document.createElement('input');
+            input.type = 'hidden'; input.name = 'leave_type_id'; input.id = 'leaveTypeId';
+            form.append(input);
+        }
+        return input;
+    };
+
+    const reloadLeaveData = async () => {
+        const html = await fetch(window.location.href, { credentials: 'same-origin' }).then((response) => response.text());
+        const typeMatch = html.match(/window\.leaveTypes\s*=\s*(\[[\s\S]*?\]);<\/script>/);
+        const requestMatch = html.match(/window\.leaveRequests\s*=\s*(\[[\s\S]*?\]);<\/script>/);
+        if (typeMatch) window.leaveTypes = JSON.parse(typeMatch[1]);
+        if (requestMatch) window.leaveRequests = JSON.parse(requestMatch[1]);
+    };
+
+    const submitAjax = async (form, button, refresh) => {
+        if (!form.checkValidity()) { form.classList.add('was-validated'); return; }
+        try {
+            await window.FuelOpsAjax.submitForm(form, { button, refresh, redirect: false });
+            await reloadLeaveData();
+        } catch (error) { /* shared helper preserves values and renders the error */ }
+    };
+
+    document.addEventListener('click', async (event) => {
+        const actionButton = event.target.closest('[data-leave-action]');
+        if (actionButton) {
+            event.preventDefault(); event.stopImmediatePropagation();
+            const action = actionButton.dataset.leaveAction || '';
+            if (action === 'note') {
+                window.FuelOpsAjax.notify('info', 'Choose Approve, Reject, or Forward to save these notes.');
+                return;
+            }
+            const form = document.getElementById('leaveActionForm');
+            const requestId = actionButton.dataset.leaveId || document.getElementById('leaveDetailsModal')?.dataset.requestId || '';
+            if (!form || !requestId) return;
+            const name = actionButton.dataset.leaveName || 'this request';
+            const confirmed = !window.Swal ? window.confirm(`${action} leave request for ${name}?`) : (await window.Swal.fire({
+                icon: action === 'reject' ? 'warning' : 'question',
+                title: `${action.charAt(0).toUpperCase() + action.slice(1)} leave request?`,
+                text: `This will update ${name}'s leave request immediately.`,
+                showCancelButton: true, confirmButtonColor: action === 'reject' ? '#ed3237' : '#f68b34',
+            })).isConfirmed;
+            if (!confirmed) return;
+            form.elements.request_id.value = requestId;
+            form.elements.action.value = action;
+            form.elements.approval_notes.value = document.getElementById('approvalNotes')?.value || '';
+            await submitAjax(form, actionButton, '#leaveRequestBody');
+            return;
+        }
+
+        const editButton = event.target.closest('[data-leave-type-edit]');
+        if (editButton) {
+            event.preventDefault(); event.stopImmediatePropagation();
+            const type = (window.leaveTypes || []).find((item) => item.name === editButton.dataset.leaveTypeEdit);
+            const form = document.getElementById('leaveTypeForm');
+            if (!type || !form) return;
+            ensureTypeId(form).value = type.id;
+            form.elements.leave_name.value = type.name;
+            form.elements.description.value = type.description;
+            form.elements.maximum_days.value = type.max_days;
+            form.elements.is_paid.checked = Boolean(type.paid);
+            form.elements.requires_attachment.checked = Boolean(type.requires_attachment);
+            form.elements.status.value = String(type.status).toLowerCase();
+            const submit = form.querySelector('[type="submit"]');
+            if (submit) submit.innerHTML = '<i class="fa-solid fa-check"></i>Update';
+            form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        const toggleButton = event.target.closest('[data-leave-type-delete]');
+        if (toggleButton) {
+            event.preventDefault(); event.stopImmediatePropagation();
+            const confirmed = !window.Swal ? window.confirm(`Update ${toggleButton.dataset.leaveTypeDelete}?`) : (await window.Swal.fire({ icon: 'warning', title: 'Update leave type status?', text: `${toggleButton.dataset.leaveTypeDelete} will be activated or deactivated.`, showCancelButton: true, confirmButtonColor: '#ed3237' })).isConfirmed;
+            if (!confirmed) return;
+            const form = document.getElementById('leaveTypeToggleForm');
+            if (!form) return;
+            form.elements.leave_type_id.value = toggleButton.dataset.leaveTypeId || '';
+            await submitAjax(form, toggleButton, '.clock-workspace');
+        }
+    }, true);
+
+    document.addEventListener('submit', async (event) => {
+        const form = event.target;
+        if (!['leaveTypeForm', 'leaveApprovalSettingsForm'].includes(form.id)) return;
+        event.preventDefault(); event.stopImmediatePropagation();
+        const refresh = form.id === 'leaveTypeForm' ? '.clock-workspace' : '';
+        await submitAjax(form, event.submitter || form.querySelector('[type="submit"]'), refresh);
+    }, true);
+
+    document.addEventListener('reset', (event) => {
+        if (event.target.id !== 'leaveTypeForm') return;
+        ensureTypeId(event.target).value = '';
+        const submit = event.target.querySelector('[type="submit"]');
+        if (submit) submit.innerHTML = '<i class="fa-solid fa-check"></i>Save';
+    });
 }());

@@ -1,0 +1,18 @@
+MAIL_HOST=smtp.your-provider.com
+MAIL_PORT=587
+MAIL_USERNAME=your-email@example.com
+MAIL_PASSWORD=your-smtp-password
+MAIL_ENCRYPTION=tls
+MAIL_SMTP_AUTH=true
+
+MAIL_FROM_ADDRESS=your-email@example.com
+MAIL_FROM_NAME="UMACHI Oil & Gas Ltd"
+
+MAIL_COMPANY_NAME="UMACHI Oil & Gas Ltd"
+MAIL_COMPANY_LOGO_URL=https://your-domain.com/public/assets/images/logo.png
+MAIL_COMPANY_ADDRESS="Your company address"
+MAIL_COMPANY_PHONE="+234 000 000 0000"
+MAIL_COMPANY_EMAIL=your-email@example.com
+
+MAIL_LOGIN_URL=http://localhost/umachi/index.php?route=login
+MAIL_TIMEOUT=15

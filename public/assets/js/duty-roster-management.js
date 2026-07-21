@@ -160,7 +160,7 @@
             return;
         }
 
-        const baseEvents = window.dutyRosterEvents || [];
+        let baseEvents = window.dutyRosterEvents || [];
         const calendar = new window.FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
             initialDate: new Date().toISOString().slice(0, 10),
@@ -194,10 +194,116 @@
         });
 
         calendar.render();
+        window.refreshDutyCalendar = async () => {
+            const html = await fetch(window.location.href, { credentials: 'same-origin' }).then((response) => response.text());
+            const match = html.match(/window\.dutyRosterEvents\s*=\s*(\[[\s\S]*?\]);/);
+            if (match) { baseEvents = JSON.parse(match[1]); applyCalendarFilters(); }
+        };
     };
 
     document.addEventListener('DOMContentLoaded', () => {
         applyRosterFilters();
         initDutyCalendar();
     });
+
+    const refreshSelector = () => document.getElementById('pumpAllocationWorkspace') ? '#pumpAllocationWorkspace'
+        : document.getElementById('dutyRosterWorkspace') ? '#dutyRosterWorkspace'
+            : document.querySelector('.clock-workspace') ? '.clock-workspace' : '';
+
+    const confirmAction = async (form, button) => {
+        const action = button?.dataset.dutyAction || button?.dataset.shiftAction || '';
+        if (!['delete', 'cancel', 'publish', 'archive', 'toggle'].includes(action)) return true;
+        const name = button?.dataset.dutyName || button?.dataset.name || 'this record';
+        const destructive = action === 'delete' || action === 'cancel';
+        if (!window.Swal) return window.confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${name}?`);
+        return (await window.Swal.fire({
+            icon: 'warning',
+            title: `${action.charAt(0).toUpperCase() + action.slice(1)} ${name}?`,
+            text: 'This change will be applied immediately.',
+            showCancelButton: true,
+            confirmButtonColor: destructive ? '#ed3237' : '#f68b34',
+            confirmButtonText: 'Yes, continue',
+        })).isConfirmed;
+    };
+
+    const loadAllocationData = async () => {
+        if (!document.getElementById('pumpAllocationWorkspace')) return;
+        const html = await fetch(window.location.href, { credentials: 'same-origin' }).then((response) => response.text());
+        const match = html.match(/window\.existingPumpAllocations\s*=\s*(\[[\s\S]*?\]);<\/script>/);
+        if (match) window.existingPumpAllocations = JSON.parse(match[1]);
+    };
+
+    const enhanceAllocationRows = () => {
+        const allocations = window.existingPumpAllocations || [];
+        document.querySelectorAll('#pumpAllocationBody tr[data-allocation-row]').forEach((row) => {
+            const assignmentId = row.querySelector('[name="assignment_id"]')?.value;
+            const allocation = allocations.find((item) => String(item.id) === String(assignmentId));
+            const actions = row.querySelector('.duty-actions');
+            if (!allocation || !actions || actions.querySelector('[data-duty-action="edit"]')) return;
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = 'btn btn-sm btn-light';
+            button.title = 'Edit';
+            button.dataset.dutyAction = 'edit';
+            button.dataset.assignmentId = String(allocation.id);
+            button.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>';
+            actions.querySelector('form')?.insertAdjacentElement('beforebegin', button) || actions.append(button);
+        });
+    };
+
+    document.addEventListener('click', (event) => {
+        const actionButton = event.target.closest('[data-duty-action], [data-shift-action]');
+        if (!actionButton) return;
+        const action = actionButton.dataset.dutyAction || actionButton.dataset.shiftAction;
+        const actionForm = actionButton.closest('form');
+        if (actionForm && action !== 'edit') {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            actionForm.requestSubmit(actionButton);
+            return;
+        }
+        const button = action === 'edit' ? actionButton : null;
+        if (!button) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        const allocation = (window.existingPumpAllocations || []).find((item) => String(item.id) === button.dataset.assignmentId);
+        const form = document.getElementById('pumpAllocationForm');
+        if (!allocation || !form) return;
+        const values = {
+            assignment_id: allocation.id, roster_id: allocation.roster_id,
+            employee_id: allocation.employee_db_id, pump_id: allocation.pump_id,
+            assignment_date: allocation.date, shift_id: allocation.shift_id, remarks: allocation.remarks,
+        };
+        Object.entries(values).forEach(([name, value]) => { if (form.elements[name]) form.elements[name].value = value ?? ''; });
+        ['allocationEmployee', 'allocationPump', 'allocationShift'].forEach((id) => document.getElementById(id)?.dispatchEvent(new Event('change')));
+        const submit = form.querySelector('[type="submit"]');
+        if (submit) submit.innerHTML = '<i class="fa-solid fa-check"></i>Update Assignment';
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, true);
+
+    document.addEventListener('submit', async (event) => {
+        const form = event.target;
+        const action = form.action || '';
+        if (!action.includes('/shifts/') && !action.includes('/duty-rosters/') && !action.includes('/duty-assignments/')) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        if (!form.checkValidity()) { form.classList.add('was-validated'); return; }
+        if (!(await confirmAction(form, event.submitter))) return;
+        const selector = refreshSelector();
+        try {
+            await window.FuelOpsAjax.submitForm(form, {
+                button: event.submitter || form.querySelector('[type="submit"]'),
+                refresh: selector,
+                redirect: false,
+            });
+            if (selector === '#pumpAllocationWorkspace') {
+                await loadAllocationData();
+                enhanceAllocationRows();
+            }
+        } catch (error) { /* shared helper rendered the error */ }
+    }, true);
+
+    document.addEventListener('fuelops:refreshed', enhanceAllocationRows);
+    document.addEventListener('DOMContentLoaded', enhanceAllocationRows);
+    if (document.getElementById('dutyCalendar')) window.setInterval(() => window.refreshDutyCalendar?.().catch(() => {}), 60000);
 }());

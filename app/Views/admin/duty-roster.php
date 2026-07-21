@@ -21,7 +21,7 @@ require __DIR__ . '/../includes/header.php';
         </div>
     </section>
 
-    <section class="container-fluid clock-workspace">
+    <section class="container-fluid clock-workspace" id="dutyRosterWorkspace">
         <?php if ($dutySuccess): ?><div class="alert alert-success"><i class="fa-solid fa-circle-check me-2"></i><?php echo e($dutySuccess); ?></div><?php endif; ?>
         <?php if ($dutyError): ?><div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i><?php echo e($dutyError); ?></div><?php endif; ?>
 
@@ -34,7 +34,7 @@ require __DIR__ . '/../includes/header.php';
         <?php if ($canManageDuties): ?>
             <article class="app-card card duty-form-card duty-form mt-4">
                 <div class="duty-section-heading"><span><i class="fa-solid fa-calendar-plus"></i></span><div><small>Roster Period</small><h2>Create Duty Roster</h2></div></div>
-                <form method="post" action="<?php echo e(route_url('admin/duty-rosters/save')); ?>" class="needs-validation" novalidate>
+                <form method="post" action="<?php echo e(route_url('admin/duty-rosters/save')); ?>" class="needs-validation" data-ajax-form data-ajax-refresh="#dutyRosterWorkspace" novalidate>
                     <?php echo csrf_field(); ?>
                     <div class="row g-3">
                         <div class="col-md-4"><label class="form-label" for="rosterName">Roster Name</label><input class="form-control" id="rosterName" name="roster_name" required placeholder="July Week 2 Roster"></div>

@@ -19,6 +19,7 @@ require __DIR__ . '/../includes/header.php';
     <?php echo csrf_field(); ?>
     <input type="hidden" name="leave_type_id" id="leaveTypeToggleId">
 </form>
+<script>window.leaveTypes = <?php echo json_encode($leaveTypes, JSON_THROW_ON_ERROR); ?>;</script>
 <?php require __DIR__ . '/../includes/footer.php'; ?>
 
 

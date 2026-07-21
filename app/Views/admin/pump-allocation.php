@@ -10,7 +10,7 @@ require __DIR__ . '/../includes/header.php';
 ?>
 <main class="clock-in-page duty-module-page">
     <section class="clock-hero duty-hero"><div class="container-fluid"><nav class="duty-breadcrumb"><a href="<?php echo e(route_url('admin/dashboard')); ?>">Dashboard</a><i class="fa-solid fa-chevron-right"></i><span>Duty Roster</span><i class="fa-solid fa-chevron-right"></i><span>Pump Allocation</span></nav><div class="clock-hero__content duty-hero-card"><div><span class="eyebrow">Pump Duty Assignment</span><h1>Pump Allocation</h1><p>Assign active pump attendants to active pumps, shifts, and roster periods.</p></div><span class="duty-hero-icon"><i class="fa-solid fa-map-location-dot"></i></span></div></div></section>
-    <section class="container-fluid clock-workspace">
+    <section class="container-fluid clock-workspace" id="pumpAllocationWorkspace">
         <?php if ($dutySuccess): ?><div class="alert alert-success"><i class="fa-solid fa-circle-check me-2"></i><?php echo e($dutySuccess); ?></div><?php endif; ?>
         <?php if ($dutyError): ?><div class="alert alert-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i><?php echo e($dutyError); ?></div><?php endif; ?>
 
@@ -18,8 +18,9 @@ require __DIR__ . '/../includes/header.php';
         <div class="row g-4">
             <div class="col-xl-4"><article class="app-card card duty-workflow-card h-100"><div class="duty-section-heading"><span><i class="fa-solid fa-route"></i></span><div><small>Assignment Workflow</small><h2>Assign Duty Flow</h2></div></div><ol class="assignment-flow"><li><span>1</span>Roster</li><li><span>2</span>Employee</li><li><span>3</span>Pump</li><li><span>4</span>Date</li><li><span>5</span>Shift</li></ol></article></div>
             <div class="col-xl-8">
-                <form class="app-card card duty-form-card duty-form needs-validation" id="pumpAllocationForm" method="post" action="<?php echo e(route_url('admin/duty-assignments/save')); ?>" novalidate>
+                <form class="app-card card duty-form-card duty-form needs-validation" id="pumpAllocationForm" method="post" action="<?php echo e(route_url('admin/duty-assignments/save')); ?>" data-ajax-form data-ajax-refresh="#pumpAllocationWorkspace" novalidate>
                     <?php echo csrf_field(); ?>
+                    <input type="hidden" name="assignment_id" id="allocationAssignmentId" value="">
                     <div class="duty-section-heading"><span><i class="fa-solid fa-user-plus"></i></span><div><small>New Allocation</small><h2>Assign Employee to Pump</h2></div></div>
                     <div class="row g-3">
                         <div class="col-md-6"><label class="form-label" for="allocationRoster">Duty Roster</label><select class="form-select" id="allocationRoster" name="roster_id" required><option value="">Select roster</option><?php foreach ($rosterOptions as $roster): ?><option value="<?php echo e((string) $roster['id']); ?>" data-start="<?php echo e($roster['start_date']); ?>" data-end="<?php echo e($roster['end_date']); ?>" <?php echo (string) $dutyRequest->query('roster_id', '') === (string) $roster['id'] ? 'selected' : ''; ?>><?php echo e($roster['roster_name']); ?> (<?php echo e($roster['status']); ?>)</option><?php endforeach; ?></select></div>

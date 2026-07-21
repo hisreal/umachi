@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 $employeeCsrf = (new \App\Services\AuthService())->csrfToken();
 ?>
-<form class="employee-form needs-validation" id="employeeForm" method="post" action="<?php echo e(route_url('admin/employees/store')); ?>" novalidate>
+<form class="employee-form needs-validation" id="employeeForm" method="post" action="<?php echo e(route_url('admin/employees/store')); ?>" enctype="multipart/form-data" data-employee-ajax-form novalidate>
     <input type="hidden" name="_csrf_token" value="<?php echo e($employeeCsrf); ?>">
 
     <article class="app-card card employee-form-section">
@@ -15,6 +15,7 @@ $employeeCsrf = (new \App\Services\AuthService())->csrfToken();
             <div class="col-md-3"><label class="form-label" for="lastName">Last Name</label><input class="form-control" id="lastName" name="last_name" required><div class="invalid-feedback">Last name is required.</div></div>
             <div class="col-md-3"><label class="form-label" for="gender">Gender</label><select class="form-select" id="gender" name="gender" required><option value="">Select gender</option><?php foreach ($genders as $gender): ?><option value="<?php echo e($gender); ?>"><?php echo e($gender); ?></option><?php endforeach; ?></select></div>
             <div class="col-12"><label class="form-label" for="personalEmail">Personal Email Address</label><input class="form-control" type="email" id="personalEmail" name="personal_email" autocomplete="email" required><div class="form-text">Used for personal contact only. It cannot be used to sign in.</div><div class="invalid-feedback">Enter a valid personal email address.</div></div>
+            <div class="col-12"><label class="form-label" for="passportPhoto">Passport Photograph</label><input class="form-control" type="file" id="passportPhoto" name="passport_photo" accept="image/jpeg,image/png,image/webp" data-image-preview="#employeePhotoPreview"><div class="form-text">Optional. JPG, PNG, or WEBP up to 5 MB.</div></div>
         </div>
     </article>
 

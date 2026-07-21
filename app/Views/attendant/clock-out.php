@@ -150,8 +150,29 @@ require __DIR__ . '/../includes/header.php';
                                 <input type="number" step="0.01" min="0" id="litersSold" name="liters_sold" class="form-control" value="<?php echo e($fuelSalesSummary['liters_sold']); ?>" readonly required>
                             </div>
                             <div class="col-12 col-md-6">
-                                <label class="form-label" for="amountCollected">Amount Collected</label>
+                                <label class="form-label" for="amountCollected">Total Amount Received</label>
                                 <input type="text" inputmode="decimal" id="amountCollected" name="amount_collected" class="form-control" value="<?php echo e($fuelSalesSummary['amount_collected']); ?>" readonly required>
+                            </div>
+                            <div class="col-12"><hr><h3 class="h5 mb-0">Payment Summary</h3></div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label" for="cashReceived">Cash Received (?)</label>
+                                <input type="number" step="0.01" min="0" id="cashReceived" name="cash_received" class="form-control" value="0.00" required>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label" for="posReceived">POS / Card Payments (?)</label>
+                                <input type="number" step="0.01" min="0" id="posReceived" name="pos_received" class="form-control" value="0.00" required>
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label" for="bankTransferReceived">Bank Transfer (?)</label>
+                                <input type="number" step="0.01" min="0" id="bankTransferReceived" name="bank_transfer_received" class="form-control" value="0.00" required>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex flex-wrap align-items-center gap-2"><strong>Payment Status:</strong><span id="paymentStatus" class="badge bg-danger">Shortage ?0.00</span></div>
+                            </div>
+                            <div class="col-12" id="paymentRemarkGroup">
+                                <label class="form-label" for="paymentRemark">Payment Explanation</label>
+                                <textarea id="paymentRemark" name="payment_remark" class="form-control" rows="3" placeholder="Required for a shortage or overpayment"></textarea>
+                                <div class="invalid-feedback">Explain the payment shortage or overpayment.</div>
                             </div>
                             <div class="col-12">
                                 <label class="form-label" for="remarks">Remarks</label>
@@ -217,8 +238,36 @@ require __DIR__ . '/../includes/header.php';
                             <dd id="summaryLitersSold"><?php echo e($fuelSalesSummary['liters_sold']); ?></dd>
                         </div>
                         <div>
-                            <dt>Amount Collected</dt>
+                            <dt>Fuel Price per Litre</dt>
+                            <dd id="summaryUnitPrice"><?php echo e($fuelSalesSummary['unit_price']); ?></dd>
+                        </div>
+                        <div>
+                            <dt>Expected Amount</dt>
+                            <dd id="summaryExpectedAmount">?0.00</dd>
+                        </div>
+                        <div>
+                            <dt>Cash Received</dt>
+                            <dd id="summaryCashReceived">?0.00</dd>
+                        </div>
+                        <div>
+                            <dt>POS / Card Payments</dt>
+                            <dd id="summaryPosReceived">?0.00</dd>
+                        </div>
+                        <div>
+                            <dt>Bank Transfer</dt>
+                            <dd id="summaryBankTransferReceived">?0.00</dd>
+                        </div>
+                        <div>
+                            <dt>Total Amount Received</dt>
                             <dd id="summaryAmountCollected"><?php echo e($fuelSalesSummary['amount_collected']); ?></dd>
+                        </div>
+                        <div>
+                            <dt>Difference</dt>
+                            <dd id="summaryDifference">?0.00</dd>
+                        </div>
+                        <div class="summary-grid__wide">
+                            <dt>Status</dt>
+                            <dd><span id="summaryPaymentStatus" class="badge bg-danger">Shortage ?0.00</span></dd>
                         </div>
                         <div class="summary-grid__wide">
                             <dt>Shift</dt>

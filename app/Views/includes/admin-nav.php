@@ -42,6 +42,7 @@ $items = [
         'children' => [
             ['label' => 'Pumps', 'route' => 'admin/pumps', 'icon' => 'fa-solid fa-gas-pump'],
             ['label' => 'Add Pump', 'route' => 'admin/add-pump', 'icon' => 'fa-solid fa-plus'],
+            ['label' => 'Maintenance', 'route' => 'admin/maintenance', 'icon' => 'fa-solid fa-screwdriver-wrench'],
         ],
     ],
     [

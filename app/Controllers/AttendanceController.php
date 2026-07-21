@@ -69,22 +69,18 @@ class AttendanceController extends Controller
 
     public function submitClockIn(): void
     {
-        $this->handleAttendanceMutation(static function (Attendance $attendance): string {
+        $this->handleAttendanceMutation(static function (Attendance $attendance): array {
             $attendance->clockIn($_FILES);
-            Session::flash('attendance_success', 'Clock-In successful. Your attendance is pending verification.');
-
-            return route_url('attendance/clock-in');
-        }, route_url('attendance/clock-in'));
+            return ['_redirect' => route_url('dashboard')];
+        }, route_url('attendance/clock-in'), 'Clock-In successful. Your attendance is pending verification.');
     }
 
     public function submitClockOut(): void
     {
-        $this->handleAttendanceMutation(static function (Attendance $attendance, Request $request): string {
+        $this->handleAttendanceMutation(static function (Attendance $attendance, Request $request): array {
             $attendance->clockOut($request->all(), $_FILES);
-            Session::flash('attendance_success', 'Clock-Out successful. Your attendance is pending verification.');
-
-            return route_url('attendance/clock-out');
-        }, route_url('attendance/clock-out'));
+            return ['_redirect' => route_url('dashboard')];
+        }, route_url('attendance/clock-out'), 'Clock-Out successful. Your attendance is pending verification.');
     }
 
     public function clockIn(): void
@@ -323,50 +319,18 @@ class AttendanceController extends Controller
         return $this->attendance->getAttendanceHistory();
     }
 
-    private function handleAttendanceMutation(callable $callback, string $fallbackUrl): void
+    private function handleAttendanceMutation(callable $callback, string $fallbackUrl, string $successMessage): void
     {
         $request = Request::capture();
-        $response = new Response();
-        $auth = new AuthService();
-
-        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
-            Session::flash('attendance_error', 'Your attendance form expired. Please try again.');
-            $response->redirect($fallbackUrl);
-        }
-
-        try {
-            $response->redirect((string) $callback($this->attendance, $request));
-        } catch (\RuntimeException $exception) {
-            Session::flash('attendance_error', $exception->getMessage());
-            $response->redirect($fallbackUrl);
-        } catch (\Throwable $exception) {
-            error_log('[Attendance] ' . $exception->getMessage());
-            Session::flash('attendance_error', 'Attendance action failed. Please try again or contact your supervisor.');
-            $response->redirect($fallbackUrl);
-        }
+        $this->mutationResponse($request, fn (): array => $callback($this->attendance, $request), $successMessage, route_url('dashboard'), $fallbackUrl, 'attendance_error');
     }
 
     private function handleLeaveMutation(callable $callback, string $fallbackUrl): void
     {
         $request = Request::capture();
-        $response = new Response();
-        $auth = new AuthService();
-
-        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
-            Session::flash('leave_error', 'Your leave form expired. Please try again.');
-            $response->redirect($fallbackUrl);
-        }
-
-        try {
-            $response->redirect((string) $callback(new LeaveManagement(), $request));
-        } catch (\RuntimeException $exception) {
-            Session::flash('leave_error', $exception->getMessage());
-            $response->redirect($fallbackUrl);
-        } catch (\Throwable $exception) {
-            error_log('[Leave] ' . $exception->getMessage());
-            Session::flash('leave_error', 'Leave request could not be submitted. Please try again or contact your supervisor.');
-            $response->redirect($fallbackUrl);
-        }
+        $this->mutationResponse($request, static function () use ($callback, $request): array {
+            return ['_redirect' => (string) $callback(new LeaveManagement(), $request)];
+        }, 'Leave request updated successfully.', $fallbackUrl, $fallbackUrl, 'leave_error');
     }
 
     private function renderStaticPage(string $route, array $data): void

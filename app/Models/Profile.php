@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Session;
+use App\Services\ServiceDurationFormatter;
 use App\Services\ProfilePhotoService;
 use RuntimeException;
 use Throwable;
@@ -155,7 +156,7 @@ class Profile extends BaseModel
             ['label' => 'Employee Id', 'value' => $profile['employee_id'], 'icon' => 'fa-solid fa-id-badge'],
             ['label' => 'Department', 'value' => $profile['department'], 'icon' => 'fa-solid fa-building'],
             ['label' => 'Role', 'value' => $profile['role'], 'icon' => 'fa-solid fa-user-gear'],
-            ['label' => 'Years of Service', 'value' => $this->yearsOfService($profile['date_joined_raw']), 'icon' => 'fa-solid fa-award'],
+            ['label' => 'Duration of Service', 'value' => ServiceDurationFormatter::format($profile['date_joined_raw']), 'icon' => 'fa-solid fa-award'],
             ['label' => 'Current Shift', 'value' => 'Assigned by roster', 'icon' => 'fa-solid fa-business-time'],
             ['label' => 'Assigned Pump', 'value' => 'Assigned by roster', 'icon' => 'fa-solid fa-gas-pump'],
             ['label' => 'Attendance Rate', 'value' => 'Pending report', 'icon' => 'fa-solid fa-chart-line'],
@@ -319,16 +320,6 @@ class Profile extends BaseModel
         return '?' . number_format((float) $value, 2) . ' / Month';
     }
 
-    private function yearsOfService(string $dateJoined): string
-    {
-        $timestamp = strtotime($dateJoined);
-        if ($timestamp === false) {
-            return 'N/A';
-        }
-
-        $years = max(0, (int) date('Y') - (int) date('Y', $timestamp));
-        return $years === 1 ? '1 Year' : $years . ' Years';
-    }
 
     private function logActivity(string $activity, int $employeeId, mixed $oldValue, mixed $newValue, string $status): void
     {
