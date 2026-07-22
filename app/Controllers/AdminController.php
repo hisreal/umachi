@@ -350,9 +350,14 @@ class AdminController extends Controller
     public function resetEmployeePassword(): void
     {
         $employeeCode = (string) Request::capture()->post('employee', '');
-        $this->handleEmployeeMutation(static function (EmployeeManagementService $service) use ($employeeCode): array {
-            $password = $service->model()->resetPassword($employeeCode);
-            return ['employee' => $employeeCode, 'temporary_password' => $password, '_redirect' => route_url('admin/employees')];
+        $this->handleEmployeeMutation(static function (EmployeeManagementService $service, Request $request) use ($employeeCode): array {
+            $result = $service->resetPassword($employeeCode, self::requestContext($request));
+            $result['_message'] = !empty($result['mail_sent'])
+                ? "Password reset successfully. A temporary password has been sent to the employee's personal email."
+                : 'Password reset successfully, but the email could not be sent.';
+            $result['_notification'] = !empty($result['mail_sent']) ? 'success' : 'warning';
+            $result['_redirect'] = route_url('admin/employees');
+            return $result;
         }, route_url('admin/employees'), 'Password reset successfully.');
     }
 

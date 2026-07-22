@@ -210,6 +210,23 @@ class Employee extends BaseModel
         );
     }
 
+    public function recordPasswordResetEmailStatus(int $employeeId, string $employeeCode, bool $sent, ?string $error, array $context = []): void
+    {
+        $this->logActivity(
+            $sent ? 'Password Reset Email Sent' : 'Password Reset Email Failed',
+            $employeeId,
+            null,
+            [
+                'employee_id' => $employeeCode,
+                'administrator_id' => $this->currentUserId(),
+                'timestamp' => date('Y-m-d H:i:s'),
+                'error_message' => $sent ? null : substr((string) $error, 0, 1000),
+            ],
+            $sent ? 'success' : 'warning',
+            $context
+        );
+    }
+
 
     public function updateByCode(string $employeeCode, array $data): void
     {
@@ -278,16 +295,20 @@ class Employee extends BaseModel
             throw new \RuntimeException('Employee user account not found.');
         }
 
-        $password = 'FuelOps@' . random_int(1000, 9999);
+        $password = 'Um@' . bin2hex(random_bytes(6)) . random_int(100, 999);
+        $passwordHash = password_hash($password, PASSWORD_DEFAULT);
+        if ($passwordHash === false) {
+            throw new RuntimeException('Unable to securely generate the temporary password.');
+        }
         $this->database()->update('users', [
-            'password_hash' => password_hash($password, PASSWORD_DEFAULT),
+            'password_hash' => $passwordHash,
             'must_change_password' => 1,
             'failed_attempts' => 0,
             'locked_until' => null,
             'last_password_change_at' => date('Y-m-d H:i:s'),
         ], ['id' => (int) $employee['user_id']]);
 
-        $this->logActivity('Employee Password Reset', (int) $employee['db_id'], null, ['must_change_password' => true], 'success');
+        $this->logActivity('Password Reset', (int) $employee['db_id'], null, ['must_change_password' => true], 'success');
 
         return $password;
     }

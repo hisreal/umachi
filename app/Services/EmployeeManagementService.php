@@ -212,6 +212,52 @@ class EmployeeManagementService
 
         return ['employee_id' => $employeeId, 'employee_code' => $employeeCode, 'mail_sent' => $mailSent];
     }
+    public function resetPassword(string $employeeCode, array $context = []): array
+    {
+        $employee = $this->employees->findForView($employeeCode);
+        if ($employee === null || empty($employee['user_id'])) {
+            throw new RuntimeException('Employee user account not found.');
+        }
+
+        $temporaryPassword = $this->employees->resetPassword($employeeCode);
+        $mailSent = false;
+        $mailError = null;
+        try {
+            $loginUrl = trim((string) $this->mail->setting('login_url', ''));
+            $this->mail->sendTemplate(
+                (string) $employee['email'],
+                (string) $employee['name'],
+                'Your UMACHI Employee Account Password Has Been Reset',
+                'employee-password-reset',
+                [
+                    'employeeName' => (string) $employee['name'],
+                    'employeeId' => (string) $employee['id'],
+                    'companyEmail' => (string) $employee['username'],
+                    'password' => $temporaryPassword,
+                    'department' => (string) $employee['department'],
+                    'role' => (string) $employee['role'],
+                    'dateJoined' => '',
+                    'loginUrl' => $loginUrl !== '' ? $loginUrl : route_url('login'),
+                    'companyLogo' => (string) $this->mail->setting('company_logo', ''),
+                    'companyName' => (string) $this->mail->setting('company_name', 'FuelOps'),
+                    'companyAddress' => (string) $this->mail->setting('company_address', ''),
+                    'companyPhone' => (string) $this->mail->setting('company_phone', ''),
+                    'companyContactEmail' => (string) $this->mail->setting('company_email', ''),
+                    'emailSubject' => 'Your UMACHI Employee Account Password Has Been Reset',
+                ]
+            );
+            $mailSent = true;
+        } catch (Throwable $exception) {
+            $mailError = $exception->getMessage();
+            error_log('Password reset email failed for ' . $employeeCode . ': ' . $mailError);
+        } finally {
+            unset($temporaryPassword);
+        }
+
+        $this->employees->recordPasswordResetEmailStatus((int) $employee['db_id'], (string) $employee['id'], $mailSent, $mailError, $context);
+        return ['employee' => (string) $employee['id'], 'mail_sent' => $mailSent];
+    }
+
 
     public function update(string $employeeCode, array $data, array $files): void
     {
