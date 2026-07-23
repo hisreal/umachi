@@ -167,7 +167,7 @@ class EmployeeManagementService
         $data = $this->validateEmployee($data);
         $photos = new ProfilePhotoService();
         try {
-            $data['photo_path'] = $photos->store($files['passport_photo'] ?? null);
+            $data['photo_path'] = $photos->store($files['passport_photo'] ?? null, 'passport');
         } catch (RuntimeException $exception) {
             throw new ValidationException('Please correct the passport upload.', ['passport_photo' => $exception->getMessage()]);
         }
@@ -281,7 +281,7 @@ class EmployeeManagementService
         $oldPhotoPath = $this->employees->photoPathByCode($employeeCode);
         $removePhoto = (string) ($data['remove_photo'] ?? '') === '1';
         try {
-            $photoPath = $removePhoto ? null : $photos->store($files['passport_photo'] ?? null);
+            $photoPath = $removePhoto ? null : $photos->store($files['passport_photo'] ?? null, 'passport');
         } catch (RuntimeException $exception) {
             throw new ValidationException('Please correct the passport upload.', ['passport_photo' => $exception->getMessage()]);
         }
@@ -317,7 +317,7 @@ class EmployeeManagementService
         }
 
         try {
-            $path = $this->handleUpload($files['employee_document'] ?? null, 'employees/documents', self::DOCUMENT_TYPES, true);
+            $path = $this->handleUpload($files['employee_document'] ?? null, 'employees/documents', self::DOCUMENT_TYPES, true, (string) $data['document_type']);
         } catch (RuntimeException $exception) {
             throw new ValidationException('Please correct the document upload.', ['employee_document' => $exception->getMessage()]);
         }
@@ -344,7 +344,7 @@ class EmployeeManagementService
         $user['avatar'] = $photoPath;
         \App\Core\Session::put('auth.user', $user);
     }
-    private function handleUpload(?array $file, string $folder, array $allowedTypes, bool $required): ?string
+    private function handleUpload(?array $file, string $folder, array $allowedTypes, bool $required, string $documentType = ''): ?string
     {
         if ($file === null || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
             if ($required) {
@@ -365,6 +365,14 @@ class EmployeeManagementService
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($tmpName) ?: '';
         if (!isset($allowedTypes[$mime])) {
             throw new RuntimeException('Unsupported file type.');
+        }
+
+        if (str_starts_with($mime, 'image/')) {
+            $normalizedType = strtolower($documentType);
+            $maxBytes = str_contains($normalizedType, 'passport') ? 200 * 1024
+                : (str_contains($normalizedType, 'national') ? 300 * 1024 : 400 * 1024);
+            $maxWidth = str_contains($normalizedType, 'passport') ? 600 : 1200;
+            return (new SecureImageUploadService())->store($file, 'documents', $maxBytes, $maxWidth);
         }
 
         $uploadRoot = BASE_PATH . '/public/uploads/' . $folder;

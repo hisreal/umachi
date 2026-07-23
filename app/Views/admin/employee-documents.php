@@ -26,7 +26,7 @@ try {
     $documents = [];
 }
 
-$documentTypes = ['Passport Photograph', 'National ID', "Driver's License", 'Employment Letter', 'Other Documents'];
+$documentTypes = ['Passport Photograph', 'National ID(NIN)', "Driver's License", 'Employment Letter', 'Other Documents'];
 $employeeCsrf = (new \App\Services\AuthService())->csrfToken();
 $employeeSuccess = \App\Core\Session::pullFlash('employee_success');
 $employeeError = \App\Core\Session::pullFlash('employee_error');
@@ -53,7 +53,7 @@ require __DIR__ . '/../includes/header.php';
                 <select class="form-select" name="document_type" required><option value="">Select document type</option><?php foreach ($documentTypes as $documentType): ?><option value="<?php echo e($documentType); ?>"><?php echo e($documentType); ?></option><?php endforeach; ?></select>
                 <input class="form-control" name="document_title" placeholder="Document title" required>
                 <input class="form-control" name="expires_on" type="date" aria-label="Expiry date">
-                <input class="form-control" name="employee_document" type="file" accept="image/*,.pdf,.doc,.docx" required>
+                <input class="form-control" name="employee_document" type="file" accept="image/*,.pdf,.doc,.docx" data-image-crop data-crop-ratio="free" data-crop-ratio-source="[name='document_type']" data-compress-type="document" data-compress-type-source="[name='document_type']" required>
                 <button class="btn btn-primary" type="submit"><i class="fa-solid fa-upload"></i>Upload Document</button>
             </form>
             <div class="row g-4" id="documentGrid">
@@ -66,11 +66,14 @@ require __DIR__ . '/../includes/header.php';
                             <span class="document-card-icon"><i class="fa-solid fa-file-lines"></i></span>
                             <div>
                                 <h3><?php echo e($document['document_title']); ?></h3>
-                                <p><?php echo e($document['document_type']); ?> • Uploaded on <?php echo e(format_date($document['created_at'] ?? null)); ?></p>
+                                <p><?php echo e($document['document_type']); ?> â€¢ Uploaded on <?php echo e(format_date($document['created_at'] ?? null)); ?></p>
                                 <span class="table-badge employee-status--active">Uploaded</span>
                             </div>
                             <div class="document-actions">
-                                <a class="btn btn-sm btn-outline-brand" href="<?php echo e(asset_url($document['file_path'])); ?>" target="_blank" rel="noopener">Preview</a>
+                                <?php $isImageDocument = in_array(strtolower(pathinfo((string) $document['file_path'], PATHINFO_EXTENSION)), ['jpg', 'jpeg', 'png', 'webp'], true); ?>
+                                <?php if ($isImageDocument): ?>
+                                    <button class="btn btn-sm btn-outline-brand" type="button" data-image-view="<?php echo e(asset_url($document['file_path'])); ?>" data-image-title="<?php echo e($document['document_title']); ?>" data-download-name="<?php echo e(basename((string) $document['file_path'])); ?>"><i class="fa-solid fa-eye me-1"></i>Preview</button>
+                                <?php endif; ?>
                                 <a class="btn btn-sm btn-light" href="<?php echo e(asset_url($document['file_path'])); ?>" download>Download</a>
                                 <form method="post" action="<?php echo e(route_url('admin/employees/delete-document')); ?>" data-confirm-submit="Delete this document?">
                                     <input type="hidden" name="_csrf_token" value="<?php echo e($employeeCsrf); ?>">
@@ -87,4 +90,3 @@ require __DIR__ . '/../includes/header.php';
     </section>
 </main>
 <?php require __DIR__ . '/../includes/footer.php'; ?>
-

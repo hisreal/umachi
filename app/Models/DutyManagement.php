@@ -528,7 +528,7 @@ class DutyManagement extends BaseModel
     private function normalizeFuelType(string $value): string
     {
         $value = strtolower($value);
-        if (str_contains($value, 'petrol') || str_contains($value, 'pms')) {
+        if (str_contains($value, 'petrol') || str_contains($value, 'Petrol')) {
             return 'Petrol';
         }
         if (str_contains($value, 'diesel') || str_contains($value, 'ago')) {

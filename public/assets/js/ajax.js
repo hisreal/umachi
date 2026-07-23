@@ -69,6 +69,46 @@
         }
     };
 
+    const uploadProgress = (form) => {
+        let wrapper = form.nextElementSibling?.matches('[data-global-upload-progress]') ? form.nextElementSibling : null;
+        if (!wrapper) {
+            wrapper = document.createElement('div');
+            wrapper.className = 'mt-3';
+            wrapper.dataset.globalUploadProgress = 'true';
+            wrapper.innerHTML = '<div class="d-flex justify-content-between small mb-1"><span data-upload-status>Preparing upload...</span><strong data-upload-percentage>0%</strong></div><div class="progress" role="progressbar" aria-label="Image upload progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%"></div></div>';
+            form.insertAdjacentElement('afterend', wrapper);
+        }
+        const bar = wrapper.querySelector('.progress-bar');
+        const percentage = wrapper.querySelector('[data-upload-percentage]');
+        const status = wrapper.querySelector('[data-upload-status]');
+        wrapper.hidden = false;
+        wrapper.classList.remove('text-danger', 'text-success');
+        bar.classList.remove('bg-danger', 'bg-success');
+        bar.classList.add('progress-bar-striped', 'progress-bar-animated');
+        const reporter = (percent) => {
+            const value = Math.max(0, Math.min(100, Number(percent) || 0));
+            wrapper.querySelector('.progress').setAttribute('aria-valuenow', String(value));
+            bar.style.width = `${value}%`;
+            percentage.textContent = `${value}%`;
+            status.textContent = value >= 100 ? 'Upload complete' : 'Uploading image...';
+        };
+        reporter.success = () => {
+            reporter(100);
+            bar.classList.remove('progress-bar-striped', 'progress-bar-animated');
+            bar.classList.add('bg-success');
+            wrapper.classList.add('text-success');
+            status.textContent = 'Upload successful';
+        };
+        reporter.failure = () => {
+            bar.classList.remove('progress-bar-striped', 'progress-bar-animated');
+            bar.classList.add('bg-danger');
+            wrapper.classList.add('text-danger');
+            status.textContent = 'Upload failed';
+        };
+        reporter(0);
+        return reporter;
+    };
+
     async function request(url, options = {}) {
         const headers = new Headers(options.headers || {});
         headers.set('Accept', 'application/json');
@@ -146,12 +186,16 @@
         const button = options.button || form.querySelector('[type="submit"]');
         validation.clear(form);
         loading.start(button, options.loadingText || form.dataset.ajaxLoadingText);
+        const hasFile = Array.from(form.querySelectorAll('input[type="file"]')).some((input) => input.files?.length);
+        const progress = hasFile ? uploadProgress(form) : null;
+        const reportProgress = progress || options.onProgress;
         try {
             const formData = new FormData(form);
-            const payload = options.onProgress
-                ? await upload(form.action, formData, { method: (form.method || 'POST').toUpperCase(), onProgress: options.onProgress })
+            const payload = reportProgress
+                ? await upload(form.action, formData, { method: (form.method || 'POST').toUpperCase(), onProgress: (percent, event) => { reportProgress(percent, event); if (options.onProgress && options.onProgress !== reportProgress) options.onProgress(percent, event); } })
                 : await request(form.action, { method: (form.method || 'POST').toUpperCase(), body: formData });
             if (options.notify !== false) await notify(payload.meta?.notification || 'success', payload.message);
+            progress?.success();
             const selectors = options.refresh || form.dataset.ajaxRefresh;
             if (selectors) await refresh(selectors, options.refreshUrl);
             const redirect = payload.meta?.redirect || form.dataset.ajaxRedirect;
@@ -160,6 +204,7 @@
             return payload;
         } catch (error) {
             if (error instanceof AjaxError && Object.keys(error.errors).length) validation.render(form, error.errors);
+            progress?.failure();
             if (options.notify !== false) await notify('error', error.message);
             form.dispatchEvent(new CustomEvent('ajax:error', { bubbles: true, detail: error }));
             throw error;
@@ -185,5 +230,5 @@
         notify('error', event.reason.message);
     });
 
-    window.FuelOpsAjax = { request, upload, submitForm, refresh, notify, validation, loading, AjaxError, csrfToken };
+    window.FuelOpsAjax = { request, upload, submitForm, refresh, notify, validation, loading, uploadProgress, AjaxError, csrfToken };
 }(window, document));

@@ -222,27 +222,6 @@
     renderEmployees();
 }());
 
-    const progressReporter = (form) => {
-        let wrapper = form.nextElementSibling;
-        if (!wrapper || !wrapper.matches('[data-upload-progress]')) {
-            wrapper = document.createElement('div');
-            wrapper.className = 'progress mt-3';
-            wrapper.dataset.uploadProgress = 'true';
-            wrapper.setAttribute('role', 'progressbar');
-            wrapper.setAttribute('aria-label', 'Upload progress');
-            wrapper.innerHTML = '<div class="progress-bar progress-bar-striped progress-bar-animated" style="width:0%">0%</div>';
-            form.insertAdjacentElement('afterend', wrapper);
-        }
-        const bar = wrapper.querySelector('.progress-bar');
-        wrapper.hidden = false;
-        return (percent) => {
-            const value = Math.max(0, Math.min(100, Number(percent) || 0));
-            wrapper.setAttribute('aria-valuenow', String(value));
-            bar.style.width = `${value}%`;
-            bar.textContent = `${value}%`;
-            if (value === 100) window.setTimeout(() => { wrapper.hidden = true; }, 900);
-        };
-    };
 
     document.addEventListener('submit', async (event) => {
         if (event.defaultPrevented) return;
@@ -253,13 +232,11 @@
             event.preventDefault();
             form.classList.add('was-validated');
             if (!form.checkValidity()) return;
-            const hasUpload = Boolean(form.querySelector('input[type="file"]')?.files?.length);
             const action = form.action;
             const actionRoute = new URL(action, window.location.href).searchParams.get('route');
             await window.FuelOpsAjax.submitForm(form, {
                 button: event.submitter,
-                redirect: false,
-                onProgress: hasUpload ? progressReporter(form) : undefined
+                redirect: false
             }).then((payload) => {
                 if (actionRoute === 'admin/employees/store') {
                     const employeeListUrl = payload.meta?.redirect;
@@ -283,8 +260,7 @@
             await window.FuelOpsAjax.submitForm(form, {
                 button: event.submitter,
                 redirect: false,
-                refresh: ['.employee-summary-grid', '#documentGrid'],
-                onProgress: progressReporter(form)
+                refresh: ['.employee-summary-grid', '#documentGrid']
             }).then(() => {
                 form.reset();
                 form.classList.remove('was-validated');

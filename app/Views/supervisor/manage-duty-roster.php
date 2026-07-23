@@ -53,7 +53,7 @@ $employees = [
 
 $pumps = ['Pump 1', 'Pump 2', 'Pump 3', 'Pump 4'];
 $fuelTypes = [
-    'Petrol (PMS)',
+    'Petrol (Petrol)',
     'Diesel (AGO)',
     'Gas (LPG)',
 ];
@@ -67,27 +67,27 @@ $statuses = ['Scheduled', 'Completed', 'Cancelled'];
 // records from MySQL.
 // ========================================
 $dutyAssignments = [
-    ['date' => '2026-07-06', 'employee' => 'John Doe', 'shift' => 'Morning', 'pump' => 'Pump 1', 'fuel_type' => 'Petrol (PMS)', 'reporting_time' => '06:00 AM', 'closing_time' => '02:00 PM', 'supervisor' => 'Supervisor A', 'status' => 'Scheduled'],
+    ['date' => '2026-07-06', 'employee' => 'John Doe', 'shift' => 'Morning', 'pump' => 'Pump 1', 'fuel_type' => 'Petrol (Petrol)', 'reporting_time' => '06:00 AM', 'closing_time' => '02:00 PM', 'supervisor' => 'Supervisor A', 'status' => 'Scheduled'],
     ['date' => '2026-07-06', 'employee' => 'Mary Johnson', 'shift' => 'Morning', 'pump' => 'Pump 2', 'fuel_type' => 'Diesel (AGO)', 'reporting_time' => '06:00 AM', 'closing_time' => '02:00 PM', 'supervisor' => 'Supervisor A', 'status' => 'Scheduled'],
-    ['date' => '2026-07-06', 'employee' => 'Daniel James', 'shift' => 'Evening', 'pump' => 'Pump 1', 'fuel_type' => 'Petrol (PMS)', 'reporting_time' => '02:00 PM', 'closing_time' => '10:00 PM', 'supervisor' => 'Supervisor B', 'status' => 'Scheduled'],
+    ['date' => '2026-07-06', 'employee' => 'Daniel James', 'shift' => 'Evening', 'pump' => 'Pump 1', 'fuel_type' => 'Petrol (Petrol)', 'reporting_time' => '02:00 PM', 'closing_time' => '10:00 PM', 'supervisor' => 'Supervisor B', 'status' => 'Scheduled'],
     ['date' => '2026-07-05', 'employee' => 'Esther Grace', 'shift' => 'Evening', 'pump' => 'Pump 4', 'fuel_type' => 'Gas (LPG)', 'reporting_time' => '02:00 PM', 'closing_time' => '10:00 PM', 'supervisor' => 'Supervisor B', 'status' => 'Completed'],
-    ['date' => '2026-07-05', 'employee' => 'Chinedu Okafor', 'shift' => 'Morning', 'pump' => 'Pump 3', 'fuel_type' => 'Petrol (PMS)', 'reporting_time' => '06:00 AM', 'closing_time' => '02:00 PM', 'supervisor' => 'Supervisor A', 'status' => 'Completed'],
+    ['date' => '2026-07-05', 'employee' => 'Chinedu Okafor', 'shift' => 'Morning', 'pump' => 'Pump 3', 'fuel_type' => 'Petrol (Petrol)', 'reporting_time' => '06:00 AM', 'closing_time' => '02:00 PM', 'supervisor' => 'Supervisor A', 'status' => 'Completed'],
     ['date' => '2026-07-04', 'employee' => 'Aisha Bello', 'shift' => 'Evening', 'pump' => 'Pump 2', 'fuel_type' => 'Diesel (AGO)', 'reporting_time' => '02:00 PM', 'closing_time' => '10:00 PM', 'supervisor' => 'Supervisor B', 'status' => 'Cancelled'],
     ['date' => '2026-07-07', 'employee' => 'Samuel Peters', 'shift' => 'Morning', 'pump' => 'Pump 4', 'fuel_type' => 'Gas (LPG)', 'reporting_time' => '06:00 AM', 'closing_time' => '02:00 PM', 'supervisor' => 'Supervisor A', 'status' => 'Scheduled'],
-    ['date' => '2026-07-07', 'employee' => 'Ngozi Williams', 'shift' => 'Evening', 'pump' => 'Pump 3', 'fuel_type' => 'Petrol (PMS)', 'reporting_time' => '02:00 PM', 'closing_time' => '10:00 PM', 'supervisor' => 'Supervisor B', 'status' => 'Scheduled'],
+    ['date' => '2026-07-07', 'employee' => 'Ngozi Williams', 'shift' => 'Evening', 'pump' => 'Pump 3', 'fuel_type' => 'Petrol (Petrol)', 'reporting_time' => '02:00 PM', 'closing_time' => '10:00 PM', 'supervisor' => 'Supervisor B', 'status' => 'Scheduled'],
 ];
 
 $weeklyRoster = [
-    ['employee' => 'John Doe', 'monday' => 'Pump 1 / PMS / Morning', 'tuesday' => 'Pump 2 / AGO / Morning', 'wednesday' => 'Off', 'thursday' => 'Pump 3 / PMS / Evening', 'friday' => 'Pump 1 / PMS / Morning', 'saturday' => 'Off'],
-    ['employee' => 'Mary Johnson', 'monday' => 'Pump 2 / AGO / Morning', 'tuesday' => 'Off', 'wednesday' => 'Pump 4 / LPG / Evening', 'thursday' => 'Pump 1 / PMS / Morning', 'friday' => 'Pump 3 / PMS / Evening', 'saturday' => 'Pump 2 / AGO / Morning'],
-    ['employee' => 'Daniel James', 'monday' => 'Pump 1 / PMS / Evening', 'tuesday' => 'Pump 3 / PMS / Evening', 'wednesday' => 'Pump 2 / AGO / Morning', 'thursday' => 'Off', 'friday' => 'Pump 4 / LPG / Evening', 'saturday' => 'Pump 1 / PMS / Morning'],
-    ['employee' => 'Esther Grace', 'monday' => 'Off', 'tuesday' => 'Pump 4 / LPG / Evening', 'wednesday' => 'Pump 1 / PMS / Morning', 'thursday' => 'Pump 2 / AGO / Evening', 'friday' => 'Off', 'saturday' => 'Pump 3 / PMS / Morning'],
+    ['employee' => 'John Doe', 'monday' => 'Pump 1 / Petrol / Morning', 'tuesday' => 'Pump 2 / AGO / Morning', 'wednesday' => 'Off', 'thursday' => 'Pump 3 / Petrol / Evening', 'friday' => 'Pump 1 / Petrol / Morning', 'saturday' => 'Off'],
+    ['employee' => 'Mary Johnson', 'monday' => 'Pump 2 / AGO / Morning', 'tuesday' => 'Off', 'wednesday' => 'Pump 4 / LPG / Evening', 'thursday' => 'Pump 1 / Petrol / Morning', 'friday' => 'Pump 3 / Petrol / Evening', 'saturday' => 'Pump 2 / AGO / Morning'],
+    ['employee' => 'Daniel James', 'monday' => 'Pump 1 / Petrol / Evening', 'tuesday' => 'Pump 3 / Petrol / Evening', 'wednesday' => 'Pump 2 / AGO / Morning', 'thursday' => 'Off', 'friday' => 'Pump 4 / LPG / Evening', 'saturday' => 'Pump 1 / Petrol / Morning'],
+    ['employee' => 'Esther Grace', 'monday' => 'Off', 'tuesday' => 'Pump 4 / LPG / Evening', 'wednesday' => 'Pump 1 / Petrol / Morning', 'thursday' => 'Pump 2 / AGO / Evening', 'friday' => 'Off', 'saturday' => 'Pump 3 / Petrol / Morning'],
 ];
 
 $pumpAllocation = [
-    ['pump' => 'Pump 1', 'fuel_type' => 'Petrol (PMS)', 'morning' => 'John Doe', 'evening' => 'Daniel James'],
+    ['pump' => 'Pump 1', 'fuel_type' => 'Petrol (Petrol)', 'morning' => 'John Doe', 'evening' => 'Daniel James'],
     ['pump' => 'Pump 2', 'fuel_type' => 'Diesel (AGO)', 'morning' => 'Mary Johnson', 'evening' => 'Aisha Bello'],
-    ['pump' => 'Pump 3', 'fuel_type' => 'Petrol (PMS)', 'morning' => 'Chinedu Okafor', 'evening' => 'Ngozi Williams'],
+    ['pump' => 'Pump 3', 'fuel_type' => 'Petrol (Petrol)', 'morning' => 'Chinedu Okafor', 'evening' => 'Ngozi Williams'],
     ['pump' => 'Pump 4', 'fuel_type' => 'Gas (LPG)', 'morning' => 'Samuel Peters', 'evening' => 'Esther Grace'],
 ];
 

@@ -302,7 +302,7 @@ final class DashboardService
 
     private function fuelName(string $name): string
     {
-        return match (strtoupper($name)) { 'PMS', 'PETROL' => 'Petrol', 'AGO', 'DIESEL' => 'Diesel', 'LPG', 'GAS' => 'Gas', default => $name };
+        return match (strtoupper($name)) { 'Petrol', 'PETROL' => 'Petrol', 'AGO', 'DIESEL' => 'Diesel', 'LPG', 'GAS' => 'Gas', default => $name };
     }
 
     private function row(string $sql, array $params = []): array

@@ -9,7 +9,7 @@ use RuntimeException;
 
 class PumpManagementService
 {
-    private const FUEL_TYPES = ['Petrol', 'Diesel', 'Gas', 'Petrol (PMS)', 'Diesel (AGO)', 'Gas (LPG)'];
+    private const FUEL_TYPES = ['Petrol', 'Diesel', 'Gas', 'Petrol (Petrol)', 'Diesel (AGO)', 'Gas (LPG)'];
     private const STATUSES = ['Active', 'Inactive', 'Maintenance', 'Under Maintenance', 'Faulty'];
 
     public function __construct(private ?Pump $pumps = null, private ?AuthService $auth = null)

@@ -45,7 +45,7 @@ $supervisorOptions = $options['supervisors'];
 $departments = $options['departments'];
 $roles = $options['roles'];
 $fuelTypes = array_map(static fn (string $fuelType): string => match ($fuelType) {
-    'Petrol' => 'Petrol (PMS)',
+    'Petrol' => 'Petrol (Petrol)',
     'Diesel' => 'Diesel (AGO)',
     'Gas' => 'Gas (LPG)',
     default => $fuelType,

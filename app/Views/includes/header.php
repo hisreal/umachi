@@ -21,6 +21,9 @@ $extraStyles = $extraStyles ?? [];
     <link rel="apple-touch-icon" href="<?php echo e(asset_url('images/apple-icon.png')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset_url('vendor/bootstrap/css/bootstrap.min.css')); ?>">
     <link rel="stylesheet" href="<?php echo e(asset_url('vendor/fontawesome/css/all.min.css')); ?>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+    <link rel="stylesheet" href="<?php echo e(asset_url('css/image-cropper.css')); ?>?v=<?php echo e((string) @filemtime(BASE_PATH . '/public/assets/css/image-cropper.css')); ?>">
+    <link rel="stylesheet" href="<?php echo e(asset_url('css/image-viewer.css')); ?>?v=<?php echo e((string) @filemtime(BASE_PATH . '/public/assets/css/image-viewer.css')); ?>">
 
     <?php foreach ($extraStyles as $stylePath): ?>
         <link rel="stylesheet" href="<?php echo e(str_starts_with($stylePath, 'http') ? $stylePath : asset_url($stylePath)); ?>">

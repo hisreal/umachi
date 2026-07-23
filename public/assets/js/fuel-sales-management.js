@@ -152,7 +152,9 @@
         if (!actionInput) { actionInput = document.createElement('input'); actionInput.type = 'hidden'; actionInput.name = 'action'; form.append(actionInput); }
         actionInput.value = action;
         try {
-            await window.FuelOpsAjax.submitForm(form, { button, refresh: '.clock-workspace', redirect: false, loadingText: 'Updating sale...' });
+            await window.FuelOpsAjax.submitForm(form, action === 'verify'
+                ? { button, loadingText: 'Verifying sale...' }
+                : { button, refresh: '.clock-workspace', redirect: false, loadingText: 'Updating sale...' });
         } catch (error) {
             // Shared AJAX handling preserves notes and displays validation/service errors.
         }
@@ -181,5 +183,3 @@
         window.setInterval(refreshLiveFuelData, 30000);
         document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshLiveFuelData(); });
     }
-
-

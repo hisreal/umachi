@@ -14,6 +14,7 @@
     photoStatus: document.getElementById('photoStatus'),
     photoInput: document.getElementById('photoInput'),
     capturedImage: document.getElementById('capturedImage'),
+    openingMeterImage: document.getElementById('openingMeterImage'),
     cameraPlaceholder: document.getElementById('cameraPlaceholder'),
     takePictureBtn: document.getElementById('takePictureBtn'),
     retakePhotoBtn: document.getElementById('retakePhotoBtn'),
@@ -53,14 +54,14 @@
     const render = () => {
       const now = new Date();
 
-      selectors.currentDate.textContent = now.toLocaleDateString(undefined, {
+      if (selectors.currentDate) selectors.currentDate.textContent = now.toLocaleDateString(undefined, {
         weekday: 'long',
         month: 'long',
         day: 'numeric',
         year: 'numeric',
       });
 
-      selectors.liveClock.textContent = now.toLocaleTimeString(undefined, {
+      if (selectors.liveClock) selectors.liveClock.textContent = now.toLocaleTimeString(undefined, {
         hour: '2-digit',
         minute: '2-digit',
         second: '2-digit',
@@ -83,7 +84,8 @@
    * Enable clock-in only when a selfie has been selected.
    */
   const syncClockInButton = () => {
-    selectors.clockInBtn.disabled = !state.photoCaptured;
+    const meterEvidenceReady = !selectors.openingMeterImage || Boolean(selectors.openingMeterImage.files?.[0]);
+    if (selectors.clockInBtn) selectors.clockInBtn.disabled = !state.photoCaptured || !meterEvidenceReady;
   };
 
   /**
@@ -154,6 +156,7 @@
    * Filter and paginate static attendance rows on the frontend.
    */
   const renderHistory = () => {
+    if (!selectors.historySearch || !selectors.historyDate || !selectors.historyCount || !selectors.prevPageBtn || !selectors.nextPageBtn) return;
     const searchTerm = selectors.historySearch.value.trim().toLowerCase();
     const selectedDate = selectors.historyDate.value;
 
@@ -190,14 +193,31 @@
    * Bind all page events.
    */
   const bindEvents = () => {
-    selectors.takePictureBtn.addEventListener('click', openNativeCamera);
-    selectors.retakePhotoBtn.addEventListener('click', openNativeCamera);
-    selectors.removePhotoBtn.addEventListener('click', clearPhoto);
-    selectors.photoInput.addEventListener('change', handlePhotoSelection);
+    selectors.takePictureBtn?.addEventListener('click', openNativeCamera);
+    selectors.retakePhotoBtn?.addEventListener('click', openNativeCamera);
+    selectors.removePhotoBtn?.addEventListener('click', clearPhoto);
+    selectors.photoInput?.addEventListener('change', handlePhotoSelection);
+    selectors.photoInput?.addEventListener('imagecrop:complete', handlePhotoSelection);
+    selectors.openingMeterImage?.addEventListener('change', () => {
+      const file = selectors.openingMeterImage.files?.[0];
+      const accepted = ['image/jpeg', 'image/png', 'image/webp'];
+      if (file && !accepted.includes(file.type)) {
+        selectors.openingMeterImage.value = '';
+        notify('warning', 'Invalid Meter Photo', 'Use a JPG, JPEG, PNG, or WEBP image.');
+        return;
+      }
+      syncClockInButton();
+    });
+    selectors.openingMeterImage?.addEventListener('imagecrop:complete', syncClockInButton);
     selectors.clockInForm?.addEventListener('submit', async (event) => {
       if (!state.photoCaptured) {
         event.preventDefault();
         notify('warning', 'Photo Required', 'Please take a fresh selfie before clocking in.');
+        return;
+      }
+      if (selectors.openingMeterImage && !selectors.openingMeterImage.files?.[0]) {
+        event.preventDefault();
+        notify('warning', 'Opening Meter Photo Required', 'Take a clear photograph of the opening pump meter.');
         return;
       }
       event.preventDefault();
@@ -207,22 +227,22 @@
       }).catch(() => {});
     });
 
-    selectors.historySearch.addEventListener('input', () => {
+    selectors.historySearch?.addEventListener('input', () => {
       state.historyPage = 1;
       renderHistory();
     });
 
-    selectors.historyDate.addEventListener('change', () => {
+    selectors.historyDate?.addEventListener('change', () => {
       state.historyPage = 1;
       renderHistory();
     });
 
-    selectors.prevPageBtn.addEventListener('click', () => {
+    selectors.prevPageBtn?.addEventListener('click', () => {
       state.historyPage -= 1;
       renderHistory();
     });
 
-    selectors.nextPageBtn.addEventListener('click', () => {
+    selectors.nextPageBtn?.addEventListener('click', () => {
       state.historyPage += 1;
       renderHistory();
     });

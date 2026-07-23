@@ -116,7 +116,7 @@ class Profile extends BaseModel
             throw new RuntimeException('Please upload a passport photograph.');
         }
 
-        $required = ['state' => 'State', 'local_government_area' => 'Local Government Area', 'nationality' => 'Nationality', 'marital_status' => 'Marital status', 'national_id' => 'National ID'];
+        $required = ['state' => 'State', 'local_government_area' => 'Local Government Area', 'nationality' => 'Nationality', 'marital_status' => 'Marital status', 'national_id' => 'National ID(NIN)'];
         $extra = [];
         foreach ($required as $field => $label) {
             $extra[$field] = trim((string) ($data[$field] ?? ''));
@@ -282,7 +282,7 @@ class Profile extends BaseModel
             'national_id' => (string) ($row['national_id'] ?? ''),
             'drivers_license' => (string) ($row['drivers_license'] ?? ''),
             'emergency_contact_name' => $emergencyName,
-            'emergency_contact' => $emergency !== '' ? $emergency : 'N/A',
+            'emergency_contact' => $emergency,
             'department' => (string) ($row['department_name'] ?? 'Unassigned'),
             'role' => (string) ($row['job_title_name'] ?? Session::get('auth.role', 'User')),
             'date_joined' => $joined,

@@ -18,6 +18,8 @@
     const paymentRemark = byId('paymentRemark');
     const unitPrice = Number(form ? form.dataset.unitPrice : 0) || 0;
     const clockOutPhoto = byId('clockOutPhoto');
+    const closingMeterImage = byId('closingMeterImage');
+    const evidencePhoto = closingMeterImage || clockOutPhoto;
 
     const summaryPump = byId('summaryPump');
     const summaryFuelType = byId('summaryFuelType');
@@ -146,8 +148,8 @@
     };
 
     const validateForm = () => {
-        if (!validateField(clockOutPhoto)) {
-            showAlert('warning', 'Clock-Out Selfie Required', 'Please capture your clock-out selfie before submitting.');
+        if (evidencePhoto && !validateField(evidencePhoto)) {
+            showAlert('warning', closingMeterImage ? 'Closing Meter Photo Required' : 'Clock-Out Selfie Required', closingMeterImage ? 'Take a clear photograph of the closing pump meter.' : 'Please capture your clock-out selfie before submitting.');
             return false;
         }
 
@@ -223,6 +225,14 @@
     };
 
     if (form && hasFuelSalesFields) {
+        closingMeterImage?.addEventListener('change', () => {
+            const file = closingMeterImage.files?.[0];
+            if (file && !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+                closingMeterImage.value = '';
+                showAlert('warning', 'Invalid Meter Photo', 'Use a JPG, JPEG, PNG, or WEBP image.');
+                return;
+            }
+        });
         [pumpSelection, fuelType, openingMeter, closingMeter, litersSold, amountCollected, cashReceived, posReceived, bankTransferReceived, paymentRemark].filter(Boolean).forEach((field) => {
             field.addEventListener('input', syncSummary);
             field.addEventListener('change', syncSummary);
@@ -240,9 +250,3 @@
     syncSummary();
     window.setInterval(updateClock, 1000);
 })();
-
-
-
-
-
-

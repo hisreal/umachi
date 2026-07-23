@@ -11,7 +11,7 @@ use Throwable;
 class SettingsModel extends BaseModel
 {
     private const FUEL_TYPES = [
-        'pms' => ['name' => 'Petrol', 'short_name' => 'PMS', 'label' => 'Petrol (PMS)', 'icon' => 'fa-solid fa-gas-pump', 'tone' => 'primary'],
+        'petrol' => ['name' => 'Petrol', 'short_name' => 'Petrol', 'label' => 'Petrol (Petrol)', 'icon' => 'fa-solid fa-gas-pump', 'tone' => 'primary'],
         'ago' => ['name' => 'Diesel', 'short_name' => 'AGO', 'label' => 'Diesel (AGO)', 'icon' => 'fa-solid fa-oil-can', 'tone' => 'warning'],
         'lpg' => ['name' => 'Gas', 'short_name' => 'LPG', 'label' => 'Gas (LPG)', 'icon' => 'fa-solid fa-fire-flame-simple', 'tone' => 'info'],
     ];
@@ -30,8 +30,8 @@ class SettingsModel extends BaseModel
              )
              LEFT JOIN users u ON u.id = fp.created_by
              LEFT JOIN employees e ON e.id = u.employee_id
-             WHERE ft.short_name IN ('PMS', 'AGO', 'LPG')
-             ORDER BY FIELD(ft.short_name, 'PMS', 'AGO', 'LPG')"
+             WHERE ft.short_name IN ('Petrol', 'AGO', 'LPG')
+             ORDER BY FIELD(ft.short_name, 'Petrol', 'AGO', 'LPG')"
         );
 
         $prices = [];
@@ -179,7 +179,17 @@ class SettingsModel extends BaseModel
     {
         $ids = [];
         foreach (self::FUEL_TYPES as $key => $fuel) {
-            $row = $this->queryOne('SELECT id FROM fuel_types WHERE short_name = :short_name LIMIT 1', ['short_name' => $fuel['short_name']]);
+            $row = $this->queryOne(
+                'SELECT id, name, short_name FROM fuel_types
+                 WHERE short_name = :short_name OR name = :name
+                 ORDER BY CASE WHEN short_name = :preferred_short_name THEN 0 ELSE 1 END, id
+                 LIMIT 1',
+                [
+                    'short_name' => $fuel['short_name'],
+                    'name' => $fuel['name'],
+                    'preferred_short_name' => $fuel['short_name'],
+                ]
+            );
             if ($row === null) {
                 $ids[$key] = (int) $this->insert('fuel_types', [
                     'name' => $fuel['name'],
@@ -188,6 +198,14 @@ class SettingsModel extends BaseModel
                     'status' => 'active',
                 ]);
                 continue;
+            }
+            if ((string) $row['name'] !== $fuel['name'] || (string) $row['short_name'] !== $fuel['short_name']) {
+                $this->update('fuel_types', [
+                    'name' => $fuel['name'],
+                    'short_name' => $fuel['short_name'],
+                    'unit' => 'litre',
+                    'status' => 'active',
+                ], ['id' => (int) $row['id']]);
             }
             $ids[$key] = (int) $row['id'];
         }
@@ -253,4 +271,3 @@ class SettingsModel extends BaseModel
         }
     }
 }
-

@@ -42,7 +42,7 @@ require __DIR__ . '/../includes/header.php';
     </section>
 
     <section class="container-fluid clock-workspace">
-        <form id="editProfileForm" class="needs-validation" method="POST" action="<?php echo e(route_url($completionMode ? 'profile/complete' : 'profile/edit')); ?>" enctype="multipart/form-data" novalidate>
+        <form id="editProfileForm" class="needs-validation" method="POST" action="<?php echo e(route_url($completionMode ? 'profile/complete' : 'profile/edit')); ?>" enctype="multipart/form-data" data-image-ajax-form novalidate>
             <?php echo csrf_field(); ?>
             <?php if (!empty($profileError)): ?><div class="alert alert-danger"><?php echo e((string) $profileError); ?></div><?php endif; ?>
             <?php if (!empty($profileSuccess)): ?><div class="alert alert-success"><?php echo e((string) $profileSuccess); ?></div><?php endif; ?>
@@ -71,7 +71,7 @@ require __DIR__ . '/../includes/header.php';
                                 Remove Photo
                             </button>
                         </div>
-                        <input type="file" id="passportPhoto" name="passport_photo" class="d-none" accept="image/jpeg,image/png,image/webp">
+                        <input type="file" id="passportPhoto" name="passport_photo" class="d-none" accept="image/jpeg,image/png,image/webp" data-image-crop data-crop-ratio="1:1" data-compress-type="profile" data-image-preview=".profile-passport">
                         <input type="hidden" id="removePhoto" name="remove_photo" value="0">
                     </article>
                 </div>
@@ -139,7 +139,7 @@ require __DIR__ . '/../includes/header.php';
                                     <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-12 col-md-6"><label class="form-label" for="nationalId">National ID</label><input class="form-control" id="nationalId" name="national_id" value="<?php echo e($employee['national_id'] ?? ''); ?>" required></div>
+                            <div class="col-12 col-md-6"><label class="form-label" for="nationalId">National ID(NIN)</label><input class="form-control" id="nationalId" name="national_id" value="<?php echo e($employee['national_id'] ?? ''); ?>" required></div>
                             <div class="col-12 col-md-6"><label class="form-label" for="driversLicense">Driver's License <span class="text-muted">(if applicable)</span></label><input class="form-control" id="driversLicense" name="drivers_license" value="<?php echo e($employee['drivers_license'] ?? ''); ?>"></div>
                             <?php endif; ?>
                             <div class="col-12 col-md-6">
@@ -147,8 +147,8 @@ require __DIR__ . '/../includes/header.php';
                                 <input class="form-control" id="emergencyName" name="emergency_name" value="<?php echo e($employee['emergency_contact_name'] ?? ''); ?>" <?php echo $completionMode ? 'required' : ''; ?>>
                             </div>
                             <div class="col-12 col-md-6">
-                                <label class="form-label" for="emergencyContact">Emergency Contact</label>
-                                <input type="tel" id="emergencyContact" name="emergency_contact" class="form-control" value="<?php echo e($employee['emergency_contact'] ?? ''); ?>" required>
+                                <label class="form-label" for="emergencyContact">Emergency Contact Number</label>
+                                <input type="tel" id="emergencyContact"  name="emergency_contact" class="form-control" value="<?php echo e($employee['emergency_contact'] ?? ''); ?>" required>
                                 <div class="invalid-feedback">Emergency contact is required.</div>
                             </div>
                             <div class="col-12 col-md-6">

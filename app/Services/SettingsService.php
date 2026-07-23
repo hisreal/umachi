@@ -22,7 +22,7 @@ class SettingsService
     public function saveFuelPrices(array $data): void
     {
         $prices = [
-            'pms' => $this->number($data['pms_price'] ?? null, 'Petrol (PMS)'),
+            'petrol' => $this->number($data['Petrol_price'] ?? null, 'Petrol (Petrol)'),
             'ago' => $this->number($data['ago_price'] ?? null, 'Diesel (AGO)'),
             'lpg' => $this->number($data['lpg_price'] ?? null, 'Gas (LPG)'),
         ];

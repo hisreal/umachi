@@ -8,6 +8,7 @@ use App\Core\Database;
 use App\Core\Session;
 use App\Core\Request;
 use App\Services\AttendanceDutyPolicyService;
+use App\Services\SecureImageUploadService;
 use RuntimeException;
 use Throwable;
 
@@ -17,6 +18,8 @@ class Attendance extends BaseModel
     {
         $this->database()->execute("CREATE TABLE IF NOT EXISTS attendance (id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT, employee_id BIGINT UNSIGNED NOT NULL, duty_assignment_id BIGINT UNSIGNED NULL, shift_id BIGINT UNSIGNED NULL, attendance_date DATE NOT NULL, role VARCHAR(100) NULL, clock_in DATETIME NULL, clock_out DATETIME NULL, attendance_status ENUM('Present','Late','Absent','Half Day','On Leave') NOT NULL DEFAULT 'Present', lateness_minutes INT NOT NULL DEFAULT 0, overtime_minutes INT NOT NULL DEFAULT 0, remarks TEXT NULL, clock_in_photo VARCHAR(255) NULL, clock_out_photo VARCHAR(255) NULL, verification_status ENUM('Verified','Pending','Rejected') NOT NULL DEFAULT 'Pending', created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP, PRIMARY KEY (id), UNIQUE KEY uq_attendance_employee_shift_date (employee_id, shift_id, attendance_date), KEY idx_attendance_date_status (attendance_date, attendance_status), KEY idx_attendance_employee (employee_id), KEY idx_attendance_duty (duty_assignment_id), CONSTRAINT fk_attendance_employee_live FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE RESTRICT ON UPDATE CASCADE, CONSTRAINT fk_attendance_shift_live FOREIGN KEY (shift_id) REFERENCES shifts(id) ON DELETE SET NULL ON UPDATE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $this->addColumnIfMissing('attendance', 'role', 'ALTER TABLE attendance ADD COLUMN role VARCHAR(100) NULL AFTER attendance_date');
+        $this->addColumnIfMissing('attendance', 'opening_meter_image', 'ALTER TABLE attendance ADD COLUMN opening_meter_image VARCHAR(255) NULL AFTER clock_in_photo');
+        $this->addColumnIfMissing('attendance', 'closing_meter_image', 'ALTER TABLE attendance ADD COLUMN closing_meter_image VARCHAR(255) NULL AFTER clock_out_photo');
     }
 
     public function getEmployee(?int $employeeId = null): array
@@ -241,6 +244,8 @@ class Attendance extends BaseModel
             'clock_in_selfie_status' => $this->attendancePhotoStatus($row['clock_in_photo'] ?? null, 'clock-in'),
             'clock_out_selfie_status' => $this->attendancePhotoStatus($row['clock_out_photo'] ?? null, 'clock-out'),
             'lateness' => $this->minutesLabel((int) ($row['lateness_minutes'] ?? 0)),
+            'opening_meter_image_status' => $this->attendancePhotoStatus($row['opening_meter_image'] ?? null, 'opening-meter'),
+            'closing_meter_image_status' => $this->attendancePhotoStatus($row['closing_meter_image'] ?? null, 'closing-meter'),
             'overtime' => $this->minutesLabel((int) ($row['overtime_minutes'] ?? 0)),
             'remarks' => trim((string) ($row['remarks'] ?? '')) ?: 'No attendance remarks.',
         ];
@@ -250,10 +255,16 @@ class Attendance extends BaseModel
     public function attendanceSelfieFile(int $recordId, string $type): ?array
     {
         $this->boot();
-        if ($recordId <= 0 || !in_array($type, ['clock-in', 'clock-out'], true)) {
+        $columns = [
+            'clock-in' => 'clock_in_photo',
+            'clock-out' => 'clock_out_photo',
+            'opening-meter' => 'opening_meter_image',
+            'closing-meter' => 'closing_meter_image',
+        ];
+        if ($recordId <= 0 || !isset($columns[$type])) {
             return null;
         }
-        $column = $type === 'clock-in' ? 'clock_in_photo' : 'clock_out_photo';
+        $column = $columns[$type];
         $row = $this->queryOne(
             "SELECT {$column} AS photo_path FROM attendance WHERE id = :id LIMIT 1",
             ['id' => $recordId]
@@ -325,14 +336,16 @@ class Attendance extends BaseModel
 
         $photo = $this->storePhoto($files['clock_in_photo'] ?? null, 'clock-in');
         $now = new \DateTimeImmutable('now');
+        $requiresMeterEvidence = (new AttendanceDutyPolicyService())->requiresManualDuty((string) $employee['role']);
+        $openingMeterImage = $requiresMeterEvidence ? $this->storeMeterPhoto($files['opening_meter_image'] ?? null, 'opening-meter') : null;
         $automatic = !empty($duty['is_automatic']);
         $reporting = $automatic ? $now : new \DateTimeImmutable(date('Y-m-d') . ' ' . $duty['start_time']);
         $late = $automatic ? 0 : max(0, (int) floor(($now->getTimestamp() - $reporting->getTimestamp()) / 60));
         $grace = (int) ($duty['grace_period'] ?? 0);
         $status = !$automatic && $late > $grace ? 'Late' : 'Present';
 
-        $this->transaction(function (Database $database) use ($employee, $duty, $shiftId, $photo, $now, $late, $status): void {
-            $database->insert('attendance', [
+        $this->transaction(function (Database $database) use ($employee, $duty, $shiftId, $photo, $openingMeterImage, $now, $late, $status): void {
+            $attendanceId = (int) $database->insert('attendance', [
                 'employee_id' => (int) $employee['db_id'],
                 'duty_assignment_id' => !empty($duty['duty_assignment_id']) ? (int) $duty['duty_assignment_id'] : null,
                 'shift_id' => $shiftId,
@@ -345,9 +358,13 @@ class Attendance extends BaseModel
                 'remarks' => null,
                 'clock_in_photo' => $photo,
                 'verification_status' => 'Pending',
+                'opening_meter_image' => $openingMeterImage,
             ]);
             if (!empty($duty['is_automatic'])) {
                 $this->logActivity('Automatic Duty Assignment Applied', (int) $employee['db_id'], null, ['date' => date('Y-m-d'), 'role' => $employee['role']]);
+            }
+            if ($openingMeterImage !== null) {
+                $this->logActivity('Opening Meter Image Uploaded', (int) $employee['db_id'], null, ['attendance_id' => $attendanceId, 'pump_id' => $duty['pump_id'] ?? null, 'shift_id' => $shiftId, 'date' => date('Y-m-d')]);
             }
             $this->logActivity('Clock-In', (int) $employee['db_id'], null, ['status' => $status, 'late' => $late]);
         });
@@ -367,7 +384,13 @@ class Attendance extends BaseModel
             throw new RuntimeException('You have already clocked out for this shift.');
         }
 
-        $photo = $this->storePhoto($files['clock_out_photo'] ?? null, 'clock-out');
+        $dutyPolicy = new AttendanceDutyPolicyService();
+        $requiresMeterEvidence = $dutyPolicy->requiresManualDuty((string) $employee['role']);
+        $photo = $dutyPolicy->requiresClockOutSelfie((string) $employee['role'])
+            ? $this->storePhoto($files['clock_out_photo'] ?? null, 'clock-out')
+            : null;
+        $closingMeterImage = $requiresMeterEvidence ? $this->storeMeterPhoto($files['closing_meter_image'] ?? null, 'closing-meter') : null;
+        $data['_closing_meter_image'] = $closingMeterImage;
         $now = new \DateTimeImmutable('now');
         $automatic = !empty($duty['is_automatic']);
         $closing = $automatic ? $now : new \DateTimeImmutable(date('Y-m-d') . ' ' . $duty['end_time']);
@@ -380,7 +403,7 @@ class Attendance extends BaseModel
         }
 
 
-        $this->transaction(function (Database $database) use ($record, $employee, $duty, $data, $photo, $now, $overtime, $remarks, $fuelSale): void {
+        $this->transaction(function (Database $database) use ($record, $employee, $duty, $data, $photo, $closingMeterImage, $now, $overtime, $remarks, $fuelSale): void {
             if ($fuelSale !== null) {
                 $fuelSale->recordClockOutSale($database, $employee, $duty, $record, $data);
             }
@@ -390,8 +413,12 @@ class Attendance extends BaseModel
                 'overtime_minutes' => $overtime,
                 'remarks' => $remarks !== '' ? $remarks : $record['remarks'],
                 'clock_out_photo' => $photo,
+                'closing_meter_image' => $closingMeterImage,
                 'verification_status' => 'Pending',
             ], ['id' => (int) $record['id']]);
+            if ($closingMeterImage !== null) {
+                $this->logActivity('Closing Meter Image Uploaded', (int) $employee['db_id'], null, ['attendance_id' => (int) $record['id'], 'pump_id' => $duty['pump_id'] ?? null, 'shift_id' => $duty['shift_id'] ?? null, 'date' => date('Y-m-d')]);
+            }
             $this->logActivity('Clock-Out', (int) $employee['db_id'], ['id' => $record['id']], ['overtime' => $overtime]);
         });
     }
@@ -486,7 +513,10 @@ class Attendance extends BaseModel
         }
         return $duty;
     }
-
+    private function storeMeterPhoto(?array $file, string $type): string
+    {
+        return (new SecureImageUploadService())->store($file, 'meter', 200 * 1024, 1400);
+    }
     private function todayRecord(int $employeeId, ?int $shiftId): ?array
     {
         if ($shiftId === null) {
@@ -497,34 +527,8 @@ class Attendance extends BaseModel
 
     private function storePhoto(?array $file, string $type): string
     {
-        if ($file === null || ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
-            throw new RuntimeException('Camera verification image is required.');
-        }
-        if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
-            throw new RuntimeException('Camera image could not be uploaded.');
-        }
-        if ((int) ($file['size'] ?? 0) > 5 * 1024 * 1024) {
-            throw new RuntimeException('Camera image must not exceed 5MB.');
-        }
-        $tmp = (string) ($file['tmp_name'] ?? '');
-        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($tmp) ?: '';
-        $extensions = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
-        if (!isset($extensions[$mime])) {
-            throw new RuntimeException('Camera image must be JPG, PNG, or WEBP.');
-        }
-        $dir = BASE_PATH . '/public/uploads/attendance/' . $type;
-        if (!is_dir($dir) && !mkdir($dir, 0755, true) && !is_dir($dir)) {
-            throw new RuntimeException('Attendance photo directory is not writable.');
-        }
-        $filename = date('YmdHis') . '-' . bin2hex(random_bytes(8)) . '.' . $extensions[$mime];
-        $target = $dir . '/' . $filename;
-        if (!move_uploaded_file($tmp, $target)) {
-            throw new RuntimeException('Unable to save camera image.');
-        }
-        // Future AI facial recognition integration: compare this captured image with the employee profile photo.
-        return 'uploads/attendance/' . $type . '/' . $filename;
+        return (new SecureImageUploadService())->store($file, 'attendance', 300 * 1024, 900);
     }
-
     private function attendanceSelectSql(string $suffix): string
     {
         return "SELECT a.*, e.employee_code, CONCAT(e.first_name, ' ', e.last_name) AS employee_name, d.name AS department_name, COALESCE(a.role, jt.name) AS role_name, s.name AS shift_name FROM attendance a INNER JOIN employees e ON e.id = a.employee_id LEFT JOIN departments d ON d.id = e.department_id LEFT JOIN job_titles jt ON jt.id = e.job_title_id LEFT JOIN shifts s ON s.id = a.shift_id {$suffix}";
@@ -547,6 +551,8 @@ class Attendance extends BaseModel
             'late' => (int) ($row['lateness_minutes'] ?? 0),
             'overtime' => (int) ($row['overtime_minutes'] ?? 0),
             'verification_status' => (string) ($row['verification_status'] ?? 'Pending'),
+            'opening_meter_image_status' => $this->attendancePhotoStatus($row['opening_meter_image'] ?? null, 'opening-meter'),
+            'closing_meter_image_status' => $this->attendancePhotoStatus($row['closing_meter_image'] ?? null, 'closing-meter'),
             'photo_status' => !empty($row['clock_in_photo']) ? 'Captured' : 'Missing',
         ];
     }
@@ -555,20 +561,23 @@ class Attendance extends BaseModel
     private function resolveAttendancePhoto(mixed $storedPath, string $type): ?array
     {
         $path = str_replace('\\', '/', trim((string) $storedPath));
-        if ($path === '' || str_contains($path, "\0") || !in_array($type, ['clock-in', 'clock-out'], true)) {
+        if ($path === '' || str_contains($path, "\0") || !in_array($type, ['clock-in', 'clock-out', 'opening-meter', 'closing-meter'], true)) {
             return null;
         }
         $path = ltrim($path, '/');
         if (str_starts_with($path, 'public/')) {
             $path = substr($path, 7);
         }
-        $pattern = '#^uploads/attendance/' . preg_quote($type, '#') . '/[A-Za-z0-9._-]+\.(?:jpe?g|png|webp)$#i';
+        $legacyDirectory = 'attendance/' . $type;
+        $organizedDirectory = in_array($type, ['opening-meter', 'closing-meter'], true) ? 'meter' : 'attendance';
+        $relativeDirectory = str_starts_with($path, 'uploads/' . $legacyDirectory . '/') ? $legacyDirectory : $organizedDirectory;
+        $pattern = '#^uploads/' . preg_quote($relativeDirectory, '#') . '/[A-Za-z0-9._-]+\.(?:jpe?g|png|webp)$#i';
         if (preg_match($pattern, $path) !== 1) {
             return null;
         }
 
         $publicRoot = realpath(BASE_PATH . '/public');
-        $expectedDirectory = realpath(BASE_PATH . '/public/uploads/attendance/' . $type);
+        $expectedDirectory = realpath(BASE_PATH . '/public/uploads/' . $relativeDirectory);
         if ($publicRoot === false || $expectedDirectory === false) {
             return null;
         }

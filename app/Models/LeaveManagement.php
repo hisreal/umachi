@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Session;
+use App\Services\SecureImageUploadService;
 use RuntimeException;
 use Throwable;
 
@@ -502,6 +503,12 @@ class LeaveManagement extends BaseModel
         $allowed = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'];
         if (!in_array($extension, $allowed, true)) {
             throw new RuntimeException('Upload a PDF, image, or Word document only.');
+        }
+        $temporaryPath = (string) ($file['tmp_name'] ?? '');
+        $mime = $temporaryPath !== '' ? ((new \finfo(FILEINFO_MIME_TYPE))->file($temporaryPath) ?: '') : '';
+        if (str_starts_with($mime, 'image/')) {
+            $path = (new SecureImageUploadService())->store($file, 'documents', 400 * 1024, 1200);
+            return ['path' => $path, 'name' => (string) $file['name']];
         }
 
         $directory = BASE_PATH . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'leave-documents';

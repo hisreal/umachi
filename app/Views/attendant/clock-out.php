@@ -9,6 +9,7 @@ $currentRoute = $currentRoute ?? 'attendance/clock-out';
 $extraStyles = ['css/clock-in.css', 'css/clock-out.css'];
 $extraScripts = ['js/clock-out.js'];
 $canSubmitFuelSales = (bool) ($canSubmitFuelSales ?? false);
+$requiresClockOutSelfie = (bool) ($requiresClockOutSelfie ?? true);
 
 $employee = $employee ?? [
     'name' => 'Chinedu Okafor',
@@ -16,7 +17,7 @@ $employee = $employee ?? [
     'department' => 'Forecourt Operations',
     'role' => 'Pump Attendant',
     'shift' => 'Morning Shift (06:00 AM - 02:00 PM)',
-    'assigned_pump' => 'Pump 03 - PMS Lane',
+    'assigned_pump' => 'Pump 03 - Petrol Lane',
 ];
 $automaticDuty = (bool) ($employee['automatic_duty'] ?? false);
 $topbarSubtitle = (string) ($employee['role'] ?? 'Staff') . ' Dashboard';
@@ -28,7 +29,7 @@ $attendanceStatus = $attendanceStatus ?? [
 
 $clockOutOptions = $clockOutOptions ?? [
     'pumps' => ['Pump 1', 'Pump 2', 'Pump 3', 'Pump 4'],
-    'fuel_types' => ['PMS', 'AGO', 'DPK', 'LPG'],
+    'fuel_types' => ['Petrol', 'AGO', 'DPK', 'LPG'],
 ];
 
 
@@ -58,8 +59,8 @@ require __DIR__ . '/../includes/header.php';
     <section class="container-fluid clock-workspace">
         <?php if (!empty($attendanceSuccess)): ?><div class="alert alert-success"><?php echo e((string) $attendanceSuccess); ?></div><?php endif; ?>
         <?php if (!empty($attendanceError)): ?><div class="alert alert-danger"><?php echo e((string) $attendanceError); ?></div><?php endif; ?>
-        <div class="row g-4">
-            <div class="col-12 col-xl-5">
+        <div class="row g-4 clock-page-grid clock-out-grid">
+            <div class="col-12 col-xl-5 clock-grid-employee">
                 <article class="employee-card app-card card">
                     <div class="app-card__header">
                         <div>
@@ -108,7 +109,7 @@ require __DIR__ . '/../includes/header.php';
                 </article>
             </div>
 
-            <div class="col-12 col-xl-7">
+            <div class="col-12 col-xl-7 clock-grid-main">
                 <?php if ($canSubmitFuelSales): ?>
                 <article class="app-card card fuel-sales-card">
                     <div class="app-card__header">
@@ -179,8 +180,9 @@ require __DIR__ . '/../includes/header.php';
                                 <textarea id="remarks" name="remarks" class="form-control" rows="4" placeholder="Optional shift remarks"><?php echo e($fuelSalesSummary['remarks']); ?></textarea>
                             </div>
                             <div class="col-12">
-                                <label class="form-label" for="clockOutPhoto">Clock-Out Selfie</label>
-                                <input class="form-control" id="clockOutPhoto" name="clock_out_photo" type="file" accept="image/*" capture="user" required>
+                                <label class="form-label" for="closingMeterImage">Closing Meter Reading Photo</label>
+                                <input class="form-control" id="closingMeterImage" name="closing_meter_image" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" data-image-crop data-crop-ratio="free" data-compress-type="closing-meter" required>
+                                <div class="form-text">JPG, JPEG, PNG, or WEBP. The image will be compressed to a maximum of 200 KB while keeping meter digits clear.</div>
                             </div>
                         </div>
                     </form>
@@ -197,7 +199,7 @@ require __DIR__ . '/../includes/header.php';
                     <form id="clockOutForm" class="clock-out-form" method="post" action="<?php echo e(route_url('attendance/clock-out')); ?>" enctype="multipart/form-data" novalidate><?php echo csrf_field(); ?>
                         <div class="row g-3">
                             <div class="col-12"><label class="form-label" for="remarks">Remarks</label><textarea id="remarks" name="remarks" class="form-control" rows="4" placeholder="Optional shift remarks"></textarea></div>
-                            <div class="col-12"><label class="form-label" for="clockOutPhoto">Clock-Out Selfie</label><input class="form-control" id="clockOutPhoto" name="clock_out_photo" type="file" accept="image/*" capture="user" required></div>
+                            <?php if ($requiresClockOutSelfie): ?><div class="col-12"><label class="form-label" for="clockOutPhoto">Clock-Out Selfie</label><input class="form-control" id="clockOutPhoto" name="clock_out_photo" type="file" accept="image/*" capture="user" data-image-crop data-crop-ratio="4:3" data-compress-type="selfie" required></div><?php endif; ?>
                         </div>
                     </form>
                 </article>
@@ -205,7 +207,7 @@ require __DIR__ . '/../includes/header.php';
             </div>
 
             <?php if ($canSubmitFuelSales): ?>
-            <div class="col-12 col-xl-5">
+            <div class="col-12 col-xl-5 clock-grid-summary">
                 <article class="app-card card shift-summary-card">
                     <div class="app-card__header">
                         <div>
@@ -282,12 +284,12 @@ require __DIR__ . '/../includes/header.php';
             </div>
             <?php endif; ?>
 
-            <div class="col-12 <?php echo $canSubmitFuelSales ? 'col-xl-7' : ''; ?>">
+            <div class="col-12 <?php echo $canSubmitFuelSales ? 'col-xl-7' : ''; ?> clock-grid-action">
                 <article class="app-card card clock-action-card clock-out-action-card">
                     <div>
                         <span class="eyebrow">Clock Out Section</span>
                         <h2>Ready to Submit Shift?</h2>
-                        <p><?php echo $canSubmitFuelSales ? 'Review meter readings and collected amount before closing your shift.' : 'Confirm your clock-out selfie, then close your work shift.'; ?></p>
+                        <p><?php echo $canSubmitFuelSales ? 'Review meter readings and collected amount before closing your shift.' : ($requiresClockOutSelfie ? 'Confirm your clock-out selfie, then close your work shift.' : 'Review your attendance information, then close your work shift.'); ?></p>
                     </div>
                     <button type="submit" form="clockOutForm" class="btn btn-clock-in" id="clockOutBtn">
                         <i class="fa-solid fa-arrow-right-from-bracket"></i>
@@ -301,7 +303,3 @@ require __DIR__ . '/../includes/header.php';
     </section>
 </main>
 <?php require __DIR__ . '/../includes/footer.php'; ?>
-
-
-
-

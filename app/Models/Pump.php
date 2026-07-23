@@ -11,7 +11,7 @@ use Throwable;
 class Pump extends BaseModel
 {
     private const FUEL_TYPES = [
-        'Petrol' => ['name' => 'Petrol', 'short_name' => 'PMS'],
+        'Petrol' => ['name' => 'Petrol', 'short_name' => 'Petrol'],
         'Diesel' => ['name' => 'Diesel', 'short_name' => 'AGO'],
         'Gas' => ['name' => 'Gas', 'short_name' => 'LPG'],
     ];
@@ -109,7 +109,7 @@ class Pump extends BaseModel
     public function filters(): array
     {
         return [
-            'fuel_types' => ['Petrol (PMS)', 'Diesel (AGO)', 'Gas (LPG)'],
+            'fuel_types' => ['Petrol (Petrol)', 'Diesel (AGO)', 'Gas (LPG)'],
             'statuses' => array_values(self::STATUS_LABELS),
             'manufacturers' => array_values(array_filter(array_column($this->query(
                 'SELECT DISTINCT manufacturer FROM pumps WHERE deleted_at IS NULL AND manufacturer IS NOT NULL ORDER BY manufacturer'

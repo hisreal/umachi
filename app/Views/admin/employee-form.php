@@ -56,7 +56,7 @@ if (!isset($formEmployee['emergency_contact_name'], $formEmployee['emergency_con
                 <label class="form-label" for="passportPhoto">Passport Photo Upload</label>
                 <div class="employee-photo-upload">
                     <img id="employeePhotoPreview" src="<?php echo e(asset_url($formEmployee['photo'] ?? 'images/sample-passport.svg')); ?>" alt="Employee passport preview">
-                    <input class="form-control" type="file" id="passportPhoto" name="passport_photo" accept="image/jpeg,image/png,image/webp" data-image-preview="#employeePhotoPreview">
+                    <input class="form-control" type="file" id="passportPhoto" name="passport_photo" accept="image/jpeg,image/png,image/webp" data-image-preview="#employeePhotoPreview" data-image-crop data-crop-ratio="1:1" data-compress-type="passport">
                     <?php if ($isEditMode): ?><label class="form-check mt-2"><input class="form-check-input" type="checkbox" name="remove_photo" value="1"> Remove current photo</label><?php endif; ?>
                 </div>
             </div>

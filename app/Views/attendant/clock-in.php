@@ -14,10 +14,11 @@ $employee = $employee ?? [
     'department' => 'Forecourt Operations',
     'role' => 'Pump Attendant',
     'shift' => 'Morning Shift (06:00 AM - 02:00 PM)',
-    'assigned_pump' => 'Pump 03 - PMS Lane',
+    'assigned_pump' => 'Pump 03 - Petrol Lane',
 ];
 $automaticDuty = (bool) ($employee['automatic_duty'] ?? false);
 $topbarSubtitle = (string) ($employee['role'] ?? 'Staff') . ' Dashboard';
+$canSubmitFuelSales = (bool) ($canSubmitFuelSales ?? false);
 
 $attendanceStatus = $attendanceStatus ?? [
     'shift_date' => 'Saturday, July 4, 2026',
@@ -82,8 +83,8 @@ require __DIR__ . '/../includes/header.php';
         <?php if (!empty($attendanceError)): ?><div class="alert alert-danger"><?php echo e((string) $attendanceError); ?></div><?php endif; ?>
         <form id="clockInForm" method="post" action="<?php echo e(route_url('attendance/clock-in')); ?>" enctype="multipart/form-data">
             <?php echo csrf_field(); ?>
-        <div class="row g-4">
-            <div class="col-12 col-xl-5">
+        <div class="row g-4 clock-page-grid clock-in-grid">
+            <div class="col-12 col-xl-5 clock-grid-employee">
                 <article class="employee-card app-card card">
                     <div class="app-card__header">
                         <div>
@@ -130,7 +131,26 @@ require __DIR__ . '/../includes/header.php';
                 </article>
             </div>
 
-            <div class="col-12 col-xl-7">
+            <?php if ($canSubmitFuelSales): ?>
+            <div class="col-12 col-xl-7 clock-grid-main">
+                <article class="app-card card">
+                    <div class="app-card__header"><div><span class="eyebrow">Opening Meter Evidence</span><h2>Opening Meter Reading</h2></div><span class="employee-avatar employee-avatar--small"><i class="fa-solid fa-gauge-high"></i></span></div>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="openingMeterReading">Opening Meter Reading</label>
+                            <input class="form-control" id="openingMeterReading" type="number" value="<?php echo e($fuelSalesSummary['opening_meter'] ?? '0.00'); ?>" readonly>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label" for="openingMeterImage">Opening Meter Reading Photo</label>
+                            <input class="form-control" id="openingMeterImage" name="opening_meter_image" type="file" accept="image/jpeg,image/png,image/webp" capture="environment" data-image-crop data-crop-ratio="free" data-compress-type="opening-meter" required>
+                            <div class="form-text">JPG, JPEG, PNG, or WEBP. The image will be compressed to a maximum of 200 KB while keeping meter digits clear.</div>
+                        </div>
+                    </div>
+                </article>
+            </div>
+            <?php endif; ?>
+
+            <div class="col-12 col-xl-7 clock-grid-evidence">
                 <article class="app-card card capture-card">
                     <div class="app-card__header">
                         <div>
@@ -140,7 +160,7 @@ require __DIR__ . '/../includes/header.php';
                         <span class="status-pill status-waiting" id="photoStatus"><?php echo e($attendanceStatus['photo_status'] ?? 'Waiting...'); ?></span>
                     </div>
                     <div class="native-camera-stage">
-                        <input type="file" id="photoInput" name="clock_in_photo" class="visually-hidden" accept="image/*" capture="user" required>
+                        <input type="file" id="photoInput" name="clock_in_photo" class="visually-hidden" accept="image/*" capture="user" data-image-crop data-crop-ratio="4:3" data-compress-type="selfie" required>
                         <img id="capturedImage" alt="Captured employee selfie preview" hidden>
                         <div class="camera-placeholder" id="cameraPlaceholder">
                             <i class="fa-solid fa-camera-retro"></i>
@@ -166,7 +186,7 @@ require __DIR__ . '/../includes/header.php';
             </div>
 
 
-            <div class="col-12">
+            <div class="col-12 clock-grid-action">
                 <article class="app-card card clock-action-card">
                     <div>
                         <span class="eyebrow">Attendance Action</span>
@@ -182,6 +202,7 @@ require __DIR__ . '/../includes/header.php';
 
            
         </div>
+        </form>
     </section>
 </main>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

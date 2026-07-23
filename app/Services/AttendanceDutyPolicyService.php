@@ -37,6 +37,18 @@ final class AttendanceDutyPolicyService
         return in_array($this->normalize($role), $this->normalized($this->manualDutyRoles()), true);
     }
 
+    /** @return string[] */
+    public function clockOutSelfieExemptRoles(): array
+    {
+        return $this->configuredRoles('attendance.clock_out_selfie_exempt_roles');
+    }
+
+    public function requiresClockOutSelfie(string $role): bool
+    {
+        return !$this->requiresManualDuty($role)
+            && !in_array($this->normalize($role), $this->normalized($this->clockOutSelfieExemptRoles()), true);
+    }
+
     /** @return array<string, mixed> */
     public function virtualDutyContext(string $role): array
     {

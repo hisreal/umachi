@@ -12,7 +12,7 @@ use Throwable;
 class FuelInventory extends BaseModel
 {
     private const FUEL_TYPES = [
-        ['name' => 'Petrol', 'short_name' => 'PMS', 'tone' => 'success', 'icon' => 'fa-solid fa-gas-pump', 'reorder' => 5000.0],
+        ['name' => 'Petrol', 'short_name' => 'Petrol', 'tone' => 'success', 'icon' => 'fa-solid fa-gas-pump', 'reorder' => 5000.0],
         ['name' => 'Diesel', 'short_name' => 'AGO', 'tone' => 'warning', 'icon' => 'fa-solid fa-oil-can', 'reorder' => 3000.0],
         ['name' => 'Gas', 'short_name' => 'LPG', 'tone' => 'primary', 'icon' => 'fa-solid fa-fire-flame-simple', 'reorder' => 2500.0],
     ];
@@ -249,7 +249,7 @@ class FuelInventory extends BaseModel
 
     private function currentInventory(): array
     {
-        $rows = $this->query("SELECT ft.id AS fuel_type_id, ft.name, ft.short_name, fil.current_stock_litres, fil.minimum_stock_litres, fil.last_delivery_at, fil.last_updated_at FROM fuel_types ft LEFT JOIN fuel_inventory_levels fil ON fil.id = (SELECT fil2.id FROM fuel_inventory_levels fil2 WHERE fil2.fuel_type_id = ft.id ORDER BY fil2.tank_id IS NULL DESC, fil2.id ASC LIMIT 1) WHERE ft.deleted_at IS NULL AND ft.status = 'active' AND ft.short_name IN ('PMS', 'AGO', 'LPG') ORDER BY FIELD(ft.short_name, 'PMS', 'AGO', 'LPG'), ft.name");
+        $rows = $this->query("SELECT ft.id AS fuel_type_id, ft.name, ft.short_name, fil.current_stock_litres, fil.minimum_stock_litres, fil.last_delivery_at, fil.last_updated_at FROM fuel_types ft LEFT JOIN fuel_inventory_levels fil ON fil.id = (SELECT fil2.id FROM fuel_inventory_levels fil2 WHERE fil2.fuel_type_id = ft.id ORDER BY fil2.tank_id IS NULL DESC, fil2.id ASC LIMIT 1) WHERE ft.deleted_at IS NULL AND ft.status = 'active' AND ft.short_name IN ('Petrol', 'AGO', 'LPG') ORDER BY FIELD(ft.short_name, 'Petrol', 'AGO', 'LPG'), ft.name");
         $todaySales = $this->todayMovementTotals('sale');
         $todayDeliveries = $this->todayMovementTotals('delivery');
 
@@ -303,7 +303,7 @@ class FuelInventory extends BaseModel
 
     private function movementSummary(): array
     {
-        $rows = $this->query("SELECT ft.id, ft.name, ft.short_name, COALESCE(SUM(CASE WHEN fim.movement_type = 'delivery' THEN fim.quantity_litres ELSE 0 END), 0) AS delivered, COALESCE(SUM(CASE WHEN fim.movement_type = 'sale' THEN ABS(fim.quantity_litres) ELSE 0 END), 0) AS sold, COALESCE(fil.current_stock_litres, 0) AS current_stock FROM fuel_types ft LEFT JOIN fuel_inventory_movements fim ON fim.fuel_type_id = ft.id LEFT JOIN fuel_inventory_levels fil ON fil.id = (SELECT fil2.id FROM fuel_inventory_levels fil2 WHERE fil2.fuel_type_id = ft.id ORDER BY fil2.tank_id IS NULL DESC, fil2.id ASC LIMIT 1) WHERE ft.deleted_at IS NULL AND ft.status = 'active' AND ft.short_name IN ('PMS', 'AGO', 'LPG') GROUP BY ft.id, ft.name, ft.short_name, fil.current_stock_litres ORDER BY FIELD(ft.short_name, 'PMS', 'AGO', 'LPG'), ft.name");
+        $rows = $this->query("SELECT ft.id, ft.name, ft.short_name, COALESCE(SUM(CASE WHEN fim.movement_type = 'delivery' THEN fim.quantity_litres ELSE 0 END), 0) AS delivered, COALESCE(SUM(CASE WHEN fim.movement_type = 'sale' THEN ABS(fim.quantity_litres) ELSE 0 END), 0) AS sold, COALESCE(fil.current_stock_litres, 0) AS current_stock FROM fuel_types ft LEFT JOIN fuel_inventory_movements fim ON fim.fuel_type_id = ft.id LEFT JOIN fuel_inventory_levels fil ON fil.id = (SELECT fil2.id FROM fuel_inventory_levels fil2 WHERE fil2.fuel_type_id = ft.id ORDER BY fil2.tank_id IS NULL DESC, fil2.id ASC LIMIT 1) WHERE ft.deleted_at IS NULL AND ft.status = 'active' AND ft.short_name IN ('Petrol', 'AGO', 'LPG') GROUP BY ft.id, ft.name, ft.short_name, fil.current_stock_litres ORDER BY FIELD(ft.short_name, 'Petrol', 'AGO', 'LPG'), ft.name");
 
         return array_map(static function (array $row): array {
             $delivered = (float) $row['delivered'];
@@ -344,7 +344,7 @@ class FuelInventory extends BaseModel
             $buckets[$dateFormat === 'Y-m' ? date('Y-m', strtotime('-' . $offset . ' months')) : date('Y-m-d', strtotime('-' . $offset . ' days'))] = $index;
         }
         foreach ($rows as $row) {
-            $key = match ((string) $row['short_name']) { 'PMS' => 'petrol', 'AGO' => 'diesel', default => 'gas' };
+            $key = match ((string) $row['short_name']) { 'Petrol' => 'petrol', 'AGO' => 'diesel', default => 'gas' };
             if (isset($buckets[$row['bucket']])) {
                 $series[$key][$buckets[$row['bucket']]] = (float) $row['litres'];
             }
@@ -420,7 +420,7 @@ class FuelInventory extends BaseModel
 
     private function syncSimpleInventoryFromLevels(): void
     {
-        foreach ($this->query("SELECT ft.name, COALESCE(SUM(fil.current_stock_litres), 0) AS stock, COALESCE(MAX(fil.minimum_stock_litres), 0) AS reorder_level FROM fuel_types ft LEFT JOIN fuel_inventory_levels fil ON fil.fuel_type_id = ft.id WHERE ft.deleted_at IS NULL AND ft.short_name IN ('PMS', 'AGO', 'LPG') GROUP BY ft.id, ft.name") as $row) {
+        foreach ($this->query("SELECT ft.name, COALESCE(SUM(fil.current_stock_litres), 0) AS stock, COALESCE(MAX(fil.minimum_stock_litres), 0) AS reorder_level FROM fuel_types ft LEFT JOIN fuel_inventory_levels fil ON fil.fuel_type_id = ft.id WHERE ft.deleted_at IS NULL AND ft.short_name IN ('Petrol', 'AGO', 'LPG') GROUP BY ft.id, ft.name") as $row) {
             $this->database()->execute('INSERT INTO fuel_inventory (fuel_type, available_litres, reorder_level) VALUES (:fuel_type, :stock, :reorder_level) ON DUPLICATE KEY UPDATE available_litres = VALUES(available_litres), reorder_level = VALUES(reorder_level)', ['fuel_type' => $this->simpleFuelName((string) $row['name']), 'stock' => (float) $row['stock'], 'reorder_level' => (float) $row['reorder_level']]);
         }
     }

@@ -9,7 +9,7 @@ try {
     $priceHistory = $settingsModel->fuelPriceHistory();
 } catch (Throwable) {
     $fuelPrices = [
-        'pms' => ['fuel' => 'Petrol (PMS)', 'price' => 0.00, 'updated_by' => 'System', 'effective_date' => date('Y-m-d'), 'effective_time' => date('H:i'), 'icon' => 'fa-solid fa-gas-pump', 'tone' => 'primary'],
+        'Petrol' => ['fuel' => 'Petrol (Petrol)', 'price' => 0.00, 'updated_by' => 'System', 'effective_date' => date('Y-m-d'), 'effective_time' => date('H:i'), 'icon' => 'fa-solid fa-gas-pump', 'tone' => 'primary'],
         'ago' => ['fuel' => 'Diesel (AGO)', 'price' => 0.00, 'updated_by' => 'System', 'effective_date' => date('Y-m-d'), 'effective_time' => date('H:i'), 'icon' => 'fa-solid fa-oil-can', 'tone' => 'warning'],
         'lpg' => ['fuel' => 'Gas (LPG)', 'price' => 0.00, 'updated_by' => 'System', 'effective_date' => date('Y-m-d'), 'effective_time' => date('H:i'), 'icon' => 'fa-solid fa-fire-flame-simple', 'tone' => 'info'],
     ];

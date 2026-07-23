@@ -102,6 +102,12 @@ class AdminController extends Controller
             $details['clock_out_selfie_url'] = $details['clock_out_selfie_status'] === 'available'
                 ? $imageRoute . 'clock-out'
                 : null;
+            $details['opening_meter_image_url'] = $details['opening_meter_image_status'] === 'available'
+                ? $imageRoute . 'opening-meter'
+                : null;
+            $details['closing_meter_image_url'] = $details['closing_meter_image_status'] === 'available'
+                ? $imageRoute . 'closing-meter'
+                : null;
 
             (new ActivityLogService())->record(
                 'Attendance Selfie Viewed',
@@ -256,29 +262,12 @@ class AdminController extends Controller
     public function updateProfile(): void
     {
         $request = Request::capture();
-        $response = new Response();
-        $auth = new AuthService();
-
-        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
-            Session::flash('profile_error', 'Your profile form expired. Please try again.');
-            $response->redirect(route_url('admin/edit-profile'));
-        }
-
-        $data = $request->all();
-        $data['emergency_contact'] = (string) $request->post('emergency_phone', '');
-
-        try {
+        $this->mutationResponse($request, function () use ($request): array {
+            $data = $request->all();
+            $data['emergency_contact'] = (string) $request->post('emergency_phone', '');
             (new Profile())->updateCurrentUser($data, $_FILES, true);
-            Session::flash('profile_success', 'Profile updated successfully.');
-            $response->redirect(route_url('admin/profile'));
-        } catch (\RuntimeException $exception) {
-            Session::flash('profile_error', $exception->getMessage());
-            $response->redirect(route_url('admin/edit-profile'));
-        } catch (\Throwable $exception) {
-            error_log('[Admin Profile] ' . $exception->getMessage());
-            Session::flash('profile_error', 'Profile could not be updated. Please try again.');
-            $response->redirect(route_url('admin/edit-profile'));
-        }
+            return [];
+        }, 'Profile updated successfully.', route_url('admin/profile'), route_url('admin/edit-profile'), 'profile_error');
     }
     public function updatePassword(): void
     {
@@ -727,7 +716,9 @@ class AdminController extends Controller
             $fuelSale->verify($saleCode, $action, $notes);
             Session::flash('fuel_success', 'Fuel sale verification saved successfully.');
 
-            return route_url('admin/verify-sales') . '&transaction=' . urlencode($saleCode);
+            return $action === 'verify'
+                ? route_url('admin/fuel-sales-dashboard')
+                : route_url('admin/verify-sales') . '&transaction=' . urlencode($saleCode);
         }, route_url('admin/verify-sales'));
     }
 
@@ -962,10 +953,3 @@ class AdminController extends Controller
         return 'fa-solid fa-gauge-high';
     }
 }
-
-
-
-
-
-
-

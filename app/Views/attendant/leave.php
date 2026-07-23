@@ -129,7 +129,7 @@ require __DIR__ . '/../includes/header.php';
                             </div>
                             <div class="col-12">
                                 <label class="form-label" for="supportingDocument">Supporting Document (Optional)</label>
-                                <input type="file" id="supportingDocument" name="supporting_document" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+                                <input type="file" id="supportingDocument" name="supporting_document" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" data-image-crop data-crop-ratio="free" data-compress-type="document">
                                 <div class="form-text" id="supportingDocumentHelp">Accepted formats: PDF, JPG, PNG, DOC, DOCX. Maximum size: 5MB.</div>
                             </div>
                         </div>

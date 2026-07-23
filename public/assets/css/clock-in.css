@@ -825,3 +825,42 @@ body {
 }
 
 .topbar-external-action i { font-size: 0.9rem; }
+
+/* Compact role-aware Clock-In / Clock-Out workspace */
+.clock-page-grid > [class*="clock-grid-"] > .app-card {
+    height: auto;
+}
+
+.clock-page-grid .clock-action-card {
+    min-height: 0;
+}
+
+@media (min-width: 1200px) {
+    .clock-page-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+        gap: 1.25rem;
+        margin: 0;
+        align-items: start;
+    }
+
+    .clock-page-grid > [class*="clock-grid-"] {
+        width: auto;
+        max-width: none;
+        padding: 0;
+    }
+
+    .clock-page-grid .app-card {
+        padding: 1.15rem;
+    }
+
+    .clock-grid-employee { grid-column: 1; grid-row: 1; }
+    .clock-grid-main { grid-column: 2; grid-row: 1 / span 2; }
+    .clock-grid-summary { grid-column: 1; grid-row: 2; }
+    .clock-grid-action { grid-column: 1 / -1; grid-row: 3; }
+
+    .clock-in-grid .clock-grid-main { grid-column: 2; grid-row: 1; }
+    .clock-in-grid .clock-grid-evidence { grid-column: 1; grid-row: 2; }
+    .clock-in-grid .clock-grid-action { grid-column: 2; grid-row: 2; align-self: start; }
+
+}

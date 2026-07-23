@@ -85,11 +85,16 @@ class AttendanceController extends Controller
 
     public function clockIn(): void
     {
+        $auth = new AuthService();
+        $dutyPolicy = new AttendanceDutyPolicyService();
+        $isPumpAttendant = array_filter($auth->roles(), [$dutyPolicy, 'requiresManualDuty']) !== [];
         $this->render('attendant/clock-in.php', [
             'currentRoute' => 'attendance/clock-in',
             'employee' => $this->attendance->getEmployee(),
             'attendanceStatus' => $this->attendance->getAttendanceStatus(),
             'attendanceHistory' => $this->attendance->getAttendanceHistory(),
+            'canSubmitFuelSales' => $isPumpAttendant,
+            'fuelSalesSummary' => $isPumpAttendant ? $this->attendance->getFuelSalesSummary() : [],
             'attendanceSuccess' => Session::pullFlash('attendance_success'),
             'attendanceError' => Session::pullFlash('attendance_error'),
         ]);
@@ -97,14 +102,16 @@ class AttendanceController extends Controller
 
     public function clockOut(): void
     {
-        $auth = new AuthService();
         $dutyPolicy = new AttendanceDutyPolicyService();
-        $isPumpAttendant = array_filter($auth->roles(), [$dutyPolicy, 'requiresManualDuty']) !== [];
+        $employee = $this->attendance->getEmployee();
+        $role = (string) ($employee['role'] ?? '');
+        $isPumpAttendant = $dutyPolicy->requiresManualDuty($role);
         $data = [
             'currentRoute' => 'attendance/clock-out',
-            'employee' => $this->attendance->getEmployee(),
+            'employee' => $employee,
             'attendanceStatus' => $this->attendance->getAttendanceStatus(),
             'canSubmitFuelSales' => $isPumpAttendant,
+            'requiresClockOutSelfie' => $dutyPolicy->requiresClockOutSelfie($role),
             'attendanceSuccess' => Session::pullFlash('attendance_success'),
             'attendanceError' => Session::pullFlash('attendance_error'),
         ];
@@ -227,53 +234,20 @@ class AttendanceController extends Controller
     public function storeCompletedProfile(): void
     {
         $request = Request::capture();
-        $response = new Response();
         $auth = new AuthService();
-
-        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
-            Session::flash('profile_error', 'Your profile form expired. Please try again.');
-            $response->redirect(route_url('profile/complete'));
-        }
-
-        try {
+        $this->mutationResponse($request, function () use ($request): array {
             (new Profile())->completeCurrentUser($request->all(), $_FILES);
-            Session::flash('profile_success', 'Your profile has been completed successfully.');
-            $response->redirect(route_url($auth->mustChangePassword() ? $auth->passwordChangeRoute() : 'dashboard'));
-        } catch (\RuntimeException $exception) {
-            Session::flash('profile_error', $exception->getMessage());
-            $response->redirect(route_url('profile/complete'));
-        } catch (\Throwable $exception) {
-            error_log('[Profile Completion] ' . $exception->getMessage());
-            Session::flash('profile_error', 'Profile completion could not be saved. Please try again.');
-            $response->redirect(route_url('profile/complete'));
-        }
+            return [];
+        }, 'Your profile has been completed successfully.', route_url($auth->mustChangePassword() ? $auth->passwordChangeRoute() : 'dashboard'), route_url('profile/complete'), 'profile_error');
     }
-
     public function updateProfile(): void
     {
         $request = Request::capture();
-        $response = new Response();
-        $auth = new AuthService();
-
-        if (!$auth->validateCsrf((string) $request->post('_csrf_token', ''))) {
-            Session::flash('profile_error', 'Your profile form expired. Please try again.');
-            $response->redirect(route_url('profile/edit'));
-        }
-
-        try {
+        $this->mutationResponse($request, function () use ($request): array {
             (new Profile())->updateCurrentUser($request->all(), $_FILES);
-            Session::flash('profile_success', 'Profile updated successfully.');
-            $response->redirect(route_url('profile'));
-        } catch (\RuntimeException $exception) {
-            Session::flash('profile_error', $exception->getMessage());
-            $response->redirect(route_url('profile/edit'));
-        } catch (\Throwable $exception) {
-            error_log('[Profile] ' . $exception->getMessage());
-            Session::flash('profile_error', 'Profile could not be updated. Please try again.');
-            $response->redirect(route_url('profile/edit'));
-        }
+            return [];
+        }, 'Profile updated successfully.', route_url('profile'), route_url('profile/edit'), 'profile_error');
     }
-
     public function changePassword(): void
     {
         $this->render('attendant/change-password.php', ['currentRoute' => 'profile/change-password']);

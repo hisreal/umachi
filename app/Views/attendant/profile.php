@@ -22,7 +22,7 @@ $personalInfo = [
     ['label' => 'Phone Number', 'value' => ($employee['phone'] ?? 'N/A'), 'icon' => 'fa-solid fa-phone'],
     ['label' => 'Email Address', 'value' => ($employee['email'] ?? 'N/A'), 'icon' => 'fa-solid fa-envelope'],
     ['label' => 'Residential Address', 'value' => ($employee['address'] ?? 'N/A'), 'icon' => 'fa-solid fa-location-dot'],
-    ['label' => 'Emergency Contact', 'value' => ($employee['emergency_contact'] ?? 'N/A'), 'icon' => 'fa-solid fa-kit-medical'],
+    ['label' => 'Emergency Contact Number', 'value' => ($employee['emergency_contact'] ?? ''), 'icon' => 'fa-solid fa-kit-medical'],
 ];
 
 $employmentInfo = [

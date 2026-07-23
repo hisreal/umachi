@@ -106,6 +106,8 @@ class FuelSale extends BaseModel
             'balance_status' => $balanceStatus,
             'payment_remark' => $paymentRemark !== '' ? $paymentRemark : null,
             'remarks' => $remarks !== '' ? $remarks : null,
+            'opening_meter_image' => $attendance['opening_meter_image'] ?? null,
+            'closing_meter_image' => $data['_closing_meter_image'] ?? null,
             'submitted_at' => date('Y-m-d H:i:s'),
             'status' => 'pending',
             'verification_status' => 'Pending',
@@ -268,6 +270,9 @@ class FuelSale extends BaseModel
             'status_key' => (string) ($row['status'] ?? 'pending'),
             'submitted_time' => empty($row['submitted_at']) ? '-' : date('h:i A', strtotime((string) $row['submitted_at'])),
             'remarks' => (string) ($row['remarks'] ?? $row['rejection_reason'] ?? ''),
+            'attendance_id' => (int) ($row['attendance_id'] ?? 0),
+            'opening_meter_image' => (string) ($row['opening_meter_image'] ?? ''),
+            'closing_meter_image' => (string) ($row['closing_meter_image'] ?? ''),
         ];
     }
 
@@ -439,7 +444,7 @@ class FuelSale extends BaseModel
     {
         $value = trim($value);
         return match (strtoupper($value)) {
-            'PMS' => 'Petrol',
+            'Petrol' => 'Petrol',
             'AGO' => 'Diesel',
             'LPG' => 'Gas',
             default => str_contains($value, '(') ? trim((string) strtok($value, '(')) : ($value !== '' ? $value : 'Petrol'),
@@ -588,6 +593,8 @@ class FuelSale extends BaseModel
         $add('payment_remark', '`payment_remark` TEXT NULL AFTER `balance_status`');
         $add('remarks', '`remarks` TEXT NULL AFTER `rejection_reason`');
         $add('verification_status', "`verification_status` VARCHAR(40) NOT NULL DEFAULT 'Pending' AFTER `status`");
+        $add('opening_meter_image', '`opening_meter_image` VARCHAR(255) NULL AFTER `closing_meter`');
+        $add('closing_meter_image', '`closing_meter_image` VARCHAR(255) NULL AFTER `opening_meter_image`');
 
         $this->database()->execute("ALTER TABLE fuel_sales MODIFY status ENUM('pending','verified','rejected','correction_requested','cancelled') NOT NULL DEFAULT 'pending'");
         $this->repairAttendanceForeignKey();

@@ -14,16 +14,16 @@
         .replaceAll("'", '&#039;');
 
     const detail = (label, value) => `<div class="attendance-selfie-detail"><small>${escapeHtml(label)}</small><strong>${escapeHtml(value || 'N/A')}</strong></div>`;
-    const selfie = (label, status, url, employeeName) => {
-        let body = `<div class="attendance-selfie-empty">No ${escapeHtml(label)} Selfie Available.</div>`;
+    const evidence = (label, status, url, employeeName, kind = 'Selfie') => {
+        let body = `<div class="attendance-selfie-empty">No ${escapeHtml(label)} ${escapeHtml(kind)} Available.</div>`;
         if (status === 'missing') {
             body = '<div class="attendance-selfie-empty">Image not available.</div>';
         } else if (status === 'available' && url) {
-            body = `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" title="Open full-size image">
-                <img src="${escapeHtml(url)}" loading="lazy" alt="${escapeHtml(label)} selfie for ${escapeHtml(employeeName)}" data-attendance-selfie-image>
-            </a>`;
+            body = `<button class="btn p-0 border-0 w-100" type="button" data-image-view="${escapeHtml(url)}" data-image-title="${escapeHtml(label)} ${escapeHtml(kind)}" title="View image">
+                <img src="${escapeHtml(url)}" loading="lazy" alt="${escapeHtml(label)} ${escapeHtml(kind)} for ${escapeHtml(employeeName)}" data-attendance-selfie-image>
+            </button>`;
         }
-        return `<article class="attendance-selfie-card"><div class="attendance-selfie-card__header"><i class="fa-solid fa-camera"></i><h6>${escapeHtml(label)} Selfie</h6></div>${body}</article>`;
+        return `<article class="attendance-selfie-card"><div class="attendance-selfie-card__header"><i class="fa-solid fa-camera"></i><h6>${escapeHtml(label)} ${escapeHtml(kind)}</h6></div>${body}</article>`;
     };
 
     const modal = window.bootstrap ? new window.bootstrap.Modal(modalElement) : null;
@@ -57,15 +57,17 @@
                     ${detail('Attendance Remarks: ', record.remarks)}
                 </div>
                 <div class="attendance-selfie-image-grid">
-                    ${selfie('Clock-In', record.clock_in_selfie_status, record.clock_in_selfie_url, record.employee_name)}
-                    ${selfie('Clock-Out', record.clock_out_selfie_status, record.clock_out_selfie_url, record.employee_name)}
+                    ${evidence('Clock-In', record.clock_in_selfie_status, record.clock_in_selfie_url, record.employee_name)}
+                    ${evidence('Clock-Out', record.clock_out_selfie_status, record.clock_out_selfie_url, record.employee_name)}
+                    ${evidence('Opening Meter', record.opening_meter_image_status, record.opening_meter_image_url, record.employee_name, 'Photo')}
+                    ${evidence('Closing Meter', record.closing_meter_image_status, record.closing_meter_image_url, record.employee_name, 'Photo')}
                 </div>`;
 
             content.querySelectorAll('[data-attendance-selfie-image]').forEach((image) => {
                 image.addEventListener('error', () => {
                     const card = image.closest('.attendance-selfie-card');
                     if (card) {
-                        card.querySelector('a')?.remove();
+                        card.querySelector('[data-image-view]')?.remove();
                         card.insertAdjacentHTML('beforeend', '<div class="attendance-selfie-empty">Image not available.</div>');
                     }
                 }, { once: true });

@@ -12,4 +12,10 @@ return [
     'manual_duty_roles' => [
         'Pump Attendant',
     ],
+
+    'clock_out_selfie_exempt_roles' => [
+        'Driver',
+        'Cashier',
+        'Security',
+    ],
 ];

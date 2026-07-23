@@ -9,7 +9,7 @@ require __DIR__ . '/company-settings-setup.php';
 $settingsSuccess = \App\Core\Session::pullFlash('settings_success');
 $settingsError = \App\Core\Session::pullFlash('settings_error');
 $settingsCsrf = (new \App\Services\AuthService())->csrfToken();
-$pmsPrice = $fuelPrices['pms'] ?? ['price' => 0, 'effective_date' => date('Y-m-d'), 'effective_time' => date('H:i'), 'updated_by' => 'System'];
+$PetrolPrice = $fuelPrices['petrol'] ?? ['price' => 0, 'effective_date' => date('Y-m-d'), 'effective_time' => date('H:i'), 'updated_by' => 'System'];
 $agoPrice = $fuelPrices['ago'] ?? ['price' => 0];
 $lpgPrice = $fuelPrices['lpg'] ?? ['price' => 0];
 require __DIR__ . '/../includes/header.php';
@@ -25,12 +25,12 @@ require __DIR__ . '/../includes/header.php';
             <article class="app-card card settings-form-card">
                 <div class="settings-section-heading"><span><i class="fa-solid fa-pen-to-square"></i></span><div><small>Current Price Update</small><h2>Fuel Pricing Form</h2></div></div>
                 <div class="row g-3">
-                    <div class="col-md-4"><label class="form-label" for="petrolPrice">Petrol (PMS)</label><div class="input-group"><span class="input-group-text">NGN</span><input class="form-control settings-price-input" id="petrolPrice" name="pms_price" inputmode="decimal" value="<?php echo e(number_format((float) $pmsPrice['price'], 2, '.', '')); ?>" required></div></div>
+                    <div class="col-md-4"><label class="form-label" for="petrolPrice">Petrol (Petrol)</label><div class="input-group"><span class="input-group-text">NGN</span><input class="form-control settings-price-input" id="petrolPrice" name="Petrol_price" inputmode="decimal" value="<?php echo e(number_format((float) $PetrolPrice['price'], 2, '.', '')); ?>" required></div></div>
                     <div class="col-md-4"><label class="form-label" for="dieselPrice">Diesel (AGO)</label><div class="input-group"><span class="input-group-text">NGN</span><input class="form-control settings-price-input" id="dieselPrice" name="ago_price" inputmode="decimal" value="<?php echo e(number_format((float) $agoPrice['price'], 2, '.', '')); ?>" required></div></div>
                     <div class="col-md-4"><label class="form-label" for="gasPrice">Gas (LPG)</label><div class="input-group"><span class="input-group-text">NGN</span><input class="form-control settings-price-input" id="gasPrice" name="lpg_price" inputmode="decimal" value="<?php echo e(number_format((float) $lpgPrice['price'], 2, '.', '')); ?>" required></div></div>
-                    <div class="col-md-3"><label class="form-label" for="effectiveDate">Effective Date</label><input class="form-control" id="effectiveDate" name="effective_date" type="date" value="<?php echo e((string) $pmsPrice['effective_date']); ?>" required></div>
-                    <div class="col-md-3"><label class="form-label" for="effectiveTime">Effective Time</label><input class="form-control" id="effectiveTime" name="effective_time" type="time" value="<?php echo e((string) $pmsPrice['effective_time']); ?>" required></div>
-                    <div class="col-md-6"><label class="form-label" for="updatedBy">Updated By</label><input class="form-control" id="updatedBy" value="<?php echo e((string) $pmsPrice['updated_by']); ?>" readonly></div>
+                    <div class="col-md-3"><label class="form-label" for="effectiveDate">Effective Date</label><input class="form-control" id="effectiveDate" name="effective_date" type="date" value="<?php echo e((string) $PetrolPrice['effective_date']); ?>" required></div>
+                    <div class="col-md-3"><label class="form-label" for="effectiveTime">Effective Time</label><input class="form-control" id="effectiveTime" name="effective_time" type="time" value="<?php echo e((string) $PetrolPrice['effective_time']); ?>" required></div>
+                    <div class="col-md-6"><label class="form-label" for="updatedBy">Updated By</label><input class="form-control" id="updatedBy" value="<?php echo e((string) $PetrolPrice['updated_by']); ?>" readonly></div>
                     <div class="col-12"><label class="form-label" for="pricingRemarks">Remarks</label><textarea class="form-control" id="pricingRemarks" name="remarks" rows="3" placeholder="Optional pricing remarks"></textarea></div>
                 </div>
                 <div class="settings-form-actions"><button class="btn btn-primary" type="submit"><i class="fa-solid fa-check"></i>Save Prices</button><button class="btn btn-outline-brand" type="reset" data-settings-reset><i class="fa-solid fa-rotate-left"></i>Reset</button><a class="btn btn-light" href="<?php echo e(route_url('admin/dashboard')); ?>">Cancel</a></div>
